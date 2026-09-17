@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   LogOut,
   Sparkles,
@@ -12,6 +12,8 @@ import {
   AtSign,
   User,
   GraduationCap,
+  CheckCircle2,
+  XCircle,
 } from 'lucide-react';
 import { UserProfile, signOutUser, updateUserProfile, checkUsernameAvailability } from '../services/supabase';
 import { playPopSound, playSuccessChime } from '../utils/audio';
@@ -39,6 +41,8 @@ const GRADE_CATEGORIES = [
   },
 ];
 
+type UsernameStatus = 'idle' | 'checking' | 'available' | 'taken' | 'too_short' | 'same';
+
 export const ProfileView: React.FC<ProfileViewProps> = ({
   user,
   profile,
@@ -53,6 +57,45 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [grade, setGrade] = useState(profile?.grade || '');
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>('idle');
+
+  // Real-time debounced check of username availability as user types
+  useEffect(() => {
+    if (!editModalOpen) {
+      setUsernameStatus('idle');
+      return;
+    }
+
+    const clean = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+
+    if (clean.length === 0) {
+      setUsernameStatus('idle');
+      return;
+    }
+
+    if (clean.length < 3) {
+      setUsernameStatus('too_short');
+      return;
+    }
+
+    if (clean === profile?.username) {
+      setUsernameStatus('same');
+      return;
+    }
+
+    setUsernameStatus('checking');
+
+    const timer = setTimeout(async () => {
+      try {
+        const isAvailable = await checkUsernameAvailability(clean, user.id);
+        setUsernameStatus(isAvailable ? 'available' : 'taken');
+      } catch {
+        setUsernameStatus('idle');
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [username, editModalOpen, profile?.username, user.id]);
 
   const handleSignOut = async () => {
     playPopSound();
@@ -70,6 +113,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     setUsername(profile?.username || '');
     setSchool(profile?.school || '');
     setGrade(profile?.grade || '');
+    setUsernameStatus('same');
     setErrorMessage(null);
     setEditModalOpen(true);
   };
@@ -86,14 +130,19 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       return;
     }
 
+    if (usernameStatus === 'taken') {
+      setErrorMessage(`Přezdívka @${cleanUsername} je již obsazená.`);
+      return;
+    }
+
     setSaving(true);
 
     try {
-      // If username changed, check availability
       if (cleanUsername !== profile?.username) {
         const isAvailable = await checkUsernameAvailability(cleanUsername, user.id);
         if (!isAvailable) {
           setErrorMessage(`Přezdívka @${cleanUsername} je již obsazená. Zvol prosím jinou.`);
+          setUsernameStatus('taken');
           setSaving(false);
           return;
         }
@@ -113,6 +162,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes('duplicate key') || msg.includes('profiles_username_key')) {
         setErrorMessage('Tato přezdívka je již obsazená.');
+        setUsernameStatus('taken');
       } else {
         setErrorMessage(`Chyba při ukládání: ${msg}`);
       }
@@ -128,6 +178,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     profile?.school && profile?.grade
       ? `${profile.school} • ${profile.grade}`
       : profile?.school || profile?.grade || 'Škola a ročník nezadány';
+
+  const isSaveDisabled =
+    saving ||
+    usernameStatus === 'taken' ||
+    usernameStatus === 'too_short' ||
+    usernameStatus === 'checking';
 
   return (
     <div className="p-4 flex flex-col gap-3.5 animate-in fade-in duration-150 select-none">
@@ -247,11 +303,37 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </div>
               )}
 
-              {/* Nickname / Username Field */}
+              {/* Nickname / Username Field with Real-Time Indicator */}
               <div>
-                <label className="block text-[11px] font-feather font-black uppercase text-duoGray-pencil mb-1">
-                  Přezdívka (Nickname)
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-[11px] font-feather font-black uppercase text-duoGray-pencil">
+                    Přezdívka (Nickname)
+                  </label>
+                  {usernameStatus === 'checking' && (
+                    <span className="text-[10px] font-bold text-duoGray-pencil flex items-center gap-1 animate-pulse">
+                      <Loader2 size={12} className="animate-spin text-sparkBlue" />
+                      <span>Ověřuji...</span>
+                    </span>
+                  )}
+                  {usernameStatus === 'available' && (
+                    <span className="text-[10px] font-feather font-black text-eagerGreen flex items-center gap-1">
+                      <CheckCircle2 size={13} className="stroke-[2.5]" />
+                      <span>Volná</span>
+                    </span>
+                  )}
+                  {usernameStatus === 'taken' && (
+                    <span className="text-[10px] font-feather font-black text-[#ff4b4b] flex items-center gap-1">
+                      <XCircle size={13} className="stroke-[2.5]" />
+                      <span>Obsazená</span>
+                    </span>
+                  )}
+                  {usernameStatus === 'same' && (
+                    <span className="text-[10px] font-bold text-duoGray-pencil">
+                      Stávající
+                    </span>
+                  )}
+                </div>
+
                 <div className="relative flex items-center">
                   <AtSign size={16} className="absolute left-3 text-duoGray-faded" />
                   <input
@@ -260,12 +342,48 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
                     placeholder="oliverseidl"
                     required
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl border-2 border-duoGray-border focus:border-eagerGreen focus:outline-none text-xs font-bold text-duoGray-charcoal font-mono"
+                    className={`w-full pl-9 pr-9 py-2.5 rounded-xl border-2 focus:outline-none text-xs font-bold text-duoGray-charcoal font-mono transition-colors ${
+                      usernameStatus === 'available'
+                        ? 'border-eagerGreen bg-green-50/20'
+                        : usernameStatus === 'taken'
+                        ? 'border-[#ff4b4b] bg-red-50/20'
+                        : 'border-duoGray-border focus:border-eagerGreen'
+                    }`}
                   />
+                  <div className="absolute right-3 flex items-center pointer-events-none">
+                    {usernameStatus === 'checking' && (
+                      <Loader2 size={15} className="animate-spin text-sparkBlue" />
+                    )}
+                    {usernameStatus === 'available' && (
+                      <CheckCircle2 size={16} className="text-eagerGreen stroke-[2.5]" />
+                    )}
+                    {usernameStatus === 'taken' && (
+                      <XCircle size={16} className="text-[#ff4b4b] stroke-[2.5]" />
+                    )}
+                  </div>
                 </div>
-                <span className="text-[10px] text-duoGray-pencil mt-0.5 block font-bold">
-                  Tvá unikátní přezdívka ve Flexnote (bez diakritiky).
-                </span>
+
+                {/* Status-specific helper text */}
+                {usernameStatus === 'taken' && (
+                  <span className="text-[10.5px] font-bold text-[#ff4b4b] mt-1 block">
+                    Přezdívka @{username} je již obsazená. Zkus přidat číslo nebo změnit název.
+                  </span>
+                )}
+                {usernameStatus === 'available' && (
+                  <span className="text-[10.5px] font-bold text-eagerGreen-dark mt-1 block">
+                    Skvělé! Přezdívka @{username} je volná.
+                  </span>
+                )}
+                {usernameStatus === 'too_short' && (
+                  <span className="text-[10.5px] font-bold text-[#ff9600] mt-1 block">
+                    Přezdívka musí mít alespoň 3 znaky.
+                  </span>
+                )}
+                {(usernameStatus === 'idle' || usernameStatus === 'same' || usernameStatus === 'checking') && (
+                  <span className="text-[10px] text-duoGray-pencil mt-0.5 block font-bold">
+                    Tvá unikátní přezdívka ve Flexnote (bez diakritiky).
+                  </span>
+                )}
               </div>
 
               {/* Full Name Field */}
@@ -346,11 +464,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </div>
               </div>
 
-              {/* Submit Button */}
+              {/* Submit Button (disabled in real time if taken, checking or too short) */}
               <button
                 type="submit"
-                disabled={saving}
-                className="w-full duo-btn duo-btn-green py-3 px-4 text-xs font-feather font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer mt-1"
+                disabled={isSaveDisabled}
+                className={`w-full duo-btn py-3 px-4 text-xs font-feather font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-xs transition-all mt-1 ${
+                  isSaveDisabled
+                    ? 'bg-gray-200 text-gray-400 border-b-4 border-gray-300 cursor-not-allowed'
+                    : 'duo-btn-green cursor-pointer'
+                }`}
               >
                 {saving ? (
                   <Loader2 size={16} className="animate-spin" />
