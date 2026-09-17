@@ -1,6 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, User } from '@supabase/supabase-js';
 import { Database } from '../types/database.types';
 import { NoteItem, SubjectType } from '../types/notes';
+
+export type { User };
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://xqfayanykuaijqemwlfk.supabase.co';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhxZmF5YW55a3VhaWpxZW13bGZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk2ODAzODUsImV4cCI6MjEwNTI1NjM4NX0.pTB1DT1FW5TsCWSXjvUqBwWOfbq2KGTmtjqvCDDfCRE';
@@ -159,5 +161,26 @@ export async function fetchUserProfile(userId: string): Promise<UserProfile | nu
     return null;
   }
   return data as UserProfile;
+}
+
+/**
+ * Resend email verification link
+ */
+export async function resendVerificationEmail(email: string) {
+  const { data, error } = await supabase.auth.resend({
+    type: 'signup',
+    email,
+  });
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Check current authenticated user and refreshed verification status
+ */
+export async function checkCurrentUserVerification(): Promise<User | null> {
+  const { data: { user }, error } = await supabase.auth.getUser();
+  if (error) throw error;
+  return user;
 }
 

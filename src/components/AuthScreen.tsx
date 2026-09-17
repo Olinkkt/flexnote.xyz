@@ -5,9 +5,10 @@ import { signInWithEmail, signUpWithEmail, signInWithGoogle } from '../services/
 
 interface AuthScreenProps {
   onSuccess?: () => void;
+  onRequiresConfirmation?: (email: string) => void;
 }
 
-export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
+export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onRequiresConfirmation }) => {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -35,8 +36,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
 
     try {
       if (mode === 'signup') {
-        await signUpWithEmail(email, password, fullName);
+        const result = await signUpWithEmail(email, password, fullName);
         playSuccessChime();
+        if (result.user && !result.user.email_confirmed_at) {
+          onRequiresConfirmation?.(email);
+          return;
+        }
         setSignupSuccess(true);
         setTimeout(() => {
           onSuccess?.();
@@ -48,6 +53,10 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('Email not confirmed') || msg.includes('email_not_confirmed')) {
+        onRequiresConfirmation?.(email);
+        return;
+      }
       if (msg.includes('Invalid login credentials')) {
         setErrorMessage('Nesprávný e-mail nebo heslo.');
       } else if (msg.includes('User already registered')) {
