@@ -1,6 +1,6 @@
-# 🗺️ Plán rozvoje projektu (Product Roadmap)
+# 🗺️ Flexnote (flexnote.xyz) — Plán rozvoje projektu
 
-Tento dokument definuje vizi a jednotlivé vývojové milníky aplikace **Zápisky AI** od současné verze v1 až po pokročilou gamifikaci v5.
+Tento dokument definuje vizi a jednotlivé vývojové milníky aplikace **Flexnote (flexnote.xyz)** od současné verze v1 až po pokročilou gamifikaci v5.
 
 ---
 

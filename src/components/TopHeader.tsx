@@ -37,7 +37,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           </div>
           <div>
             <h1 className="font-feather font-black text-[20px] text-duoGray-charcoal leading-none">
-              Zápisky
+              Flexnote
             </h1>
             <span className="text-[11px] font-bold text-duoGray-pencil">
               {totalNotes} {totalNotes === 1 ? 'zápisek' : totalNotes < 5 ? 'zápisky' : 'zápisků'}
