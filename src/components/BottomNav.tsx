@@ -1,8 +1,8 @@
 import React from 'react';
-import { BookOpen, Camera, Search } from 'lucide-react';
+import { BookOpen, Camera, Search, User } from 'lucide-react';
 import { playPopSound } from '../utils/audio';
 
-export type TabType = 'notes' | 'search';
+export type TabType = 'notes' | 'search' | 'profile';
 
 interface BottomNavProps {
   activeTab: TabType;
@@ -58,15 +58,33 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           playPopSound();
           onTabChange('search');
         }}
-        className={`flex flex-col items-center justify-center py-1 px-3 rounded-duo transition-colors cursor-pointer ${
+        className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-duo transition-colors cursor-pointer ${
           activeTab === 'search' ? 'text-eagerGreen' : 'text-duoGray-pencil hover:text-duoGray-charcoal'
         }`}
       >
         <div className="w-10 h-10 flex items-center justify-center">
-          <Search size={24} className={activeTab === 'search' ? 'stroke-[2.5]' : 'stroke-[2]'} />
+          <Search size={22} className={activeTab === 'search' ? 'stroke-[2.5]' : 'stroke-[2]'} />
         </div>
         <span className="text-[11px] font-feather font-black mt-0.5 tracking-tight">
           Hledat
+        </span>
+      </button>
+
+      {/* Profile tab */}
+      <button
+        onClick={() => {
+          playPopSound();
+          onTabChange('profile');
+        }}
+        className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-duo transition-colors cursor-pointer ${
+          activeTab === 'profile' ? 'text-eagerGreen' : 'text-duoGray-pencil hover:text-duoGray-charcoal'
+        }`}
+      >
+        <div className="w-10 h-10 flex items-center justify-center">
+          <User size={22} className={activeTab === 'profile' ? 'stroke-[2.5]' : 'stroke-[2]'} />
+        </div>
+        <span className="text-[11px] font-feather font-black mt-0.5 tracking-tight">
+          Profil
         </span>
       </button>
     </div>

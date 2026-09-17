@@ -81,3 +81,83 @@ export async function deleteNoteFromCloud(noteId: string): Promise<void> {
     throw error;
   }
 }
+
+export interface UserProfile {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+  school: string | null;
+  avatar_url: string | null;
+  streak_days: number | null;
+  diamonds: number | null;
+  study_time_seconds: number | null;
+}
+
+/**
+ * Sign up with email and password
+ */
+export async function signUpWithEmail(email: string, password: string, fullName: string) {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        full_name: fullName,
+      },
+    },
+  });
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Sign in with email and password
+ */
+export async function signInWithEmail(email: string, password: string) {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Sign in with Google OAuth
+ */
+export async function signInWithGoogle() {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: window.location.origin,
+    },
+  });
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Sign out current user
+ */
+export async function signOutUser() {
+  const { error } = await supabase.auth.signOut();
+  if (error) throw error;
+}
+
+/**
+ * Fetch profile for a user ID
+ */
+export async function fetchUserProfile(userId: string): Promise<UserProfile | null> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .single();
+
+  if (error) {
+    console.warn('Could not fetch user profile:', error.message);
+    return null;
+  }
+  return data as UserProfile;
+}
+

@@ -9,7 +9,9 @@ import { NotesLibraryView } from './components/NotesLibraryView';
 
 import { SUBJECTS, INITIAL_NOTES } from './data/mockNotes';
 import { NoteItem, SubjectType } from './types/notes';
-import { fetchNotesFromCloud, saveNoteToCloud, deleteNoteFromCloud } from './services/supabase';
+import { supabase, fetchNotesFromCloud, saveNoteToCloud, deleteNoteFromCloud, fetchUserProfile, UserProfile } from './services/supabase';
+import { AuthModal } from './components/AuthModal';
+import { ProfileView } from './components/ProfileView';
 
 const STORAGE_KEY = 'duo_notes_v1_data';
 
@@ -29,19 +31,47 @@ export const App: React.FC = () => {
   });
   const [activeTab, setActiveTab] = useState<TabType>('notes');
 
-  // Load from Supabase on mount
+  // Auth & Profile State
+  const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+
+  // Sync Supabase Auth and Notes on mount & auth changes
   useEffect(() => {
-    async function loadCloudData() {
-      try {
-        const cloudNotes = await fetchNotesFromCloud();
-        if (cloudNotes && cloudNotes.length > 0) {
-          setNotes(cloudNotes);
-        }
-      } catch (err) {
-        console.warn('Supabase not yet populated or offline, using local data:', err);
+    // 1. Check initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const currentUser = session?.user || null;
+      setUser(currentUser);
+      if (currentUser) {
+        fetchUserProfile(currentUser.id).then(setUserProfile);
+        fetchNotesFromCloud(currentUser.id).then((cloudNotes) => {
+          if (cloudNotes && cloudNotes.length > 0) setNotes(cloudNotes);
+        });
+      } else {
+        // Load general cloud notes or keep local
+        fetchNotesFromCloud().then((cloudNotes) => {
+          if (cloudNotes && cloudNotes.length > 0) setNotes(cloudNotes);
+        }).catch(() => {});
       }
-    }
-    loadCloudData();
+    });
+
+    // 2. Listen to auth state changes (login, signup, logout)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const currentUser = session?.user || null;
+      setUser(currentUser);
+      if (currentUser) {
+        fetchUserProfile(currentUser.id).then(setUserProfile);
+        fetchNotesFromCloud(currentUser.id).then((cloudNotes) => {
+          if (cloudNotes && cloudNotes.length > 0) setNotes(cloudNotes);
+        });
+      } else {
+        setUserProfile(null);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -67,9 +97,9 @@ export const App: React.FC = () => {
     // Optimistic local update
     setNotes((prev) => [newNote, ...prev]);
 
-    // Async sync to Supabase
+    // Async sync to Supabase with user_id if logged in
     try {
-      const saved = await saveNoteToCloud(newNote);
+      const saved = await saveNoteToCloud(newNote, user?.id);
       setNotes((prev) => prev.map((n) => (n.id === newNote.id ? saved : n)));
     } catch (err) {
       console.error('Failed to sync new note with Supabase:', err);
@@ -123,6 +153,19 @@ export const App: React.FC = () => {
             onOpenScan={() => setScanModalOpen(true)}
           />
         )}
+
+        {activeTab === 'profile' && (
+          <ProfileView
+            user={user}
+            profile={userProfile}
+            totalNotes={notes.length}
+            onOpenAuth={() => setAuthModalOpen(true)}
+            onSignOut={() => {
+              setUser(null);
+              setUserProfile(null);
+            }}
+          />
+        )}
       </main>
 
       {/* Bottom Bar */}
@@ -147,6 +190,14 @@ export const App: React.FC = () => {
           subjects={SUBJECTS}
           onClose={() => setSelectedNote(null)}
           onDeleteNote={handleDeleteNote}
+        />
+      )}
+
+      {/* Auth Sign-In / Sign-Up Modal */}
+      {authModalOpen && (
+        <AuthModal
+          onClose={() => setAuthModalOpen(false)}
+          onSuccess={() => setAuthModalOpen(false)}
         />
       )}
     </MobileFrame>
