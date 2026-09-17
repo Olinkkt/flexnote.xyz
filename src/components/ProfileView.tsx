@@ -125,9 +125,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const initial = displayName.charAt(0).toUpperCase();
 
   const schoolGradeText =
-    profile?.school || profile?.grade
-      ? `${profile.school || 'Škola'}${profile.grade ? ` • ${profile.grade}` : ''}`
-      : 'Škola a ročník nezadány';
+    profile?.school && profile?.grade
+      ? `${profile.school} • ${profile.grade}`
+      : profile?.school || profile?.grade || 'Škola a ročník nezadány';
 
   return (
     <div className="p-4 flex flex-col gap-3.5 animate-in fade-in duration-150 select-none">
@@ -146,10 +146,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </div>
 
             {/* School & Grade display inside profile card */}
-            <div className="flex items-center gap-1.5 text-xs font-bold text-duoGray-pencil truncate mt-0.5">
-              <School size={13} className="text-eagerGreen shrink-0" />
-              <span className="truncate">{schoolGradeText}</span>
-            </div>
+            <p className="text-xs font-bold text-duoGray-pencil truncate mt-0.5">
+              {schoolGradeText}
+            </p>
 
             <p className="text-[11px] font-bold text-duoGray-faded truncate mt-0.5">
               {user.email}
