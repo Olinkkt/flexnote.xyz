@@ -59,7 +59,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>('idle');
 
-  // Real-time debounced check of username availability as user types
+  // Real-time debounced check of username availability as user types (Instagram / GitHub standard)
   useEffect(() => {
     if (!editModalOpen) {
       setUsernameStatus('idle');
@@ -68,6 +68,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
     const clean = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
 
+    // Pre-validation guards: zero database requests
     if (clean.length === 0) {
       setUsernameStatus('idle');
       return;
@@ -85,16 +86,27 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
     setUsernameStatus('checking');
 
+    // Create an AbortController to cancel stale in-flight requests if user keeps typing
+    const abortController = new AbortController();
+
+    // 500ms debounce (industry standard: typing speed is ~200-300ms/char)
     const timer = setTimeout(async () => {
       try {
-        const isAvailable = await checkUsernameAvailability(clean, user.id);
+        const isAvailable = await checkUsernameAvailability(clean, user.id, abortController.signal);
         setUsernameStatus(isAvailable ? 'available' : 'taken');
-      } catch {
+      } catch (err: unknown) {
+        // If aborted by next keystroke, ignore and do not reset status
+        if (err instanceof Error && (err.name === 'AbortError' || err.message.includes('abort') || err.message.includes('aborted'))) {
+          return;
+        }
         setUsernameStatus('idle');
       }
-    }, 300);
+    }, 500);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      abortController.abort();
+    };
   }, [username, editModalOpen, profile?.username, user.id]);
 
   const handleSignOut = async () => {

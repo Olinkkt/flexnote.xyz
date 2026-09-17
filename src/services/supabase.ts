@@ -190,21 +190,49 @@ export async function updateUserProfile(
   return data as UserProfile;
 }
 
+// In-memory cache for username availability to avoid duplicate database requests
+const usernameAvailabilityCache = new Map<string, boolean>();
+
 /**
- * Check if a username is available (not taken by another user)
+ * Check if a username is available (not taken by another user).
+ * Uses in-memory caching and abort signal to eliminate database spam.
  */
 export async function checkUsernameAvailability(
   username: string,
-  currentUserId?: string
+  currentUserId?: string,
+  signal?: AbortSignal
 ): Promise<boolean> {
   const clean = username.trim().toLowerCase();
-  let query = supabase.from('profiles').select('id').eq('username', clean);
+
+  // 1. Check in-memory cache first (0ms, 0 network requests)
+  if (usernameAvailabilityCache.has(clean)) {
+    return usernameAvailabilityCache.get(clean)!;
+  }
+
+  // 2. Query database with limit(1) using the unique B-Tree index
+  let query = supabase
+    .from('profiles')
+    .select('id')
+    .eq('username', clean)
+    .limit(1);
+
   if (currentUserId) {
     query = query.neq('id', currentUserId);
   }
+
+  if (signal) {
+    query = query.abortSignal(signal);
+  }
+
   const { data, error } = await query;
   if (error) throw error;
-  return !data || data.length === 0;
+
+  const isAvailable = !data || data.length === 0;
+
+  // 3. Cache the verified result in memory
+  usernameAvailabilityCache.set(clean, isAvailable);
+
+  return isAvailable;
 }
 
 /**
