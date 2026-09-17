@@ -9,6 +9,7 @@ import { NotesLibraryView } from './components/NotesLibraryView';
 
 import { SUBJECTS, INITIAL_NOTES } from './data/mockNotes';
 import { NoteItem, SubjectType } from './types/notes';
+import { fetchNotesFromCloud, saveNoteToCloud, deleteNoteFromCloud } from './services/supabase';
 
 const STORAGE_KEY = 'duo_notes_v1_data';
 
@@ -27,6 +28,21 @@ export const App: React.FC = () => {
     return INITIAL_NOTES;
   });
   const [activeTab, setActiveTab] = useState<TabType>('notes');
+
+  // Load from Supabase on mount
+  useEffect(() => {
+    async function loadCloudData() {
+      try {
+        const cloudNotes = await fetchNotesFromCloud();
+        if (cloudNotes && cloudNotes.length > 0) {
+          setNotes(cloudNotes);
+        }
+      } catch (err) {
+        console.warn('Supabase not yet populated or offline, using local data:', err);
+      }
+    }
+    loadCloudData();
+  }, []);
 
   useEffect(() => {
     try {
@@ -47,8 +63,27 @@ export const App: React.FC = () => {
   });
 
   // Handle new note scanned and added
-  const handleSaveScannedNote = (newNote: NoteItem) => {
-    setNotes([newNote, ...notes]);
+  const handleSaveScannedNote = async (newNote: NoteItem) => {
+    // Optimistic local update
+    setNotes((prev) => [newNote, ...prev]);
+
+    // Async sync to Supabase
+    try {
+      const saved = await saveNoteToCloud(newNote);
+      setNotes((prev) => prev.map((n) => (n.id === newNote.id ? saved : n)));
+    } catch (err) {
+      console.error('Failed to sync new note with Supabase:', err);
+    }
+  };
+
+  // Handle note deletion
+  const handleDeleteNote = async (noteId: string) => {
+    setNotes((prev) => prev.filter((n) => n.id !== noteId));
+    try {
+      await deleteNoteFromCloud(noteId);
+    } catch (err) {
+      console.error('Failed to delete note from Supabase:', err);
+    }
   };
 
   const activeMeta = SUBJECTS.find((s) => s.id === selectedSubject) || SUBJECTS[0];
@@ -111,6 +146,7 @@ export const App: React.FC = () => {
           note={selectedNote}
           subjects={SUBJECTS}
           onClose={() => setSelectedNote(null)}
+          onDeleteNote={handleDeleteNote}
         />
       )}
     </MobileFrame>

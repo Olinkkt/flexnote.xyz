@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Copy, Check, BookOpen, Code2 } from 'lucide-react';
+import { X, Copy, Check, BookOpen, Code2, Trash2 } from 'lucide-react';
 import { NoteItem, SubjectMeta } from '../types/notes';
 import { playPopSound } from '../utils/audio';
 import { MarkdownRenderer } from './MarkdownRenderer';
@@ -9,12 +9,14 @@ interface NoteDetailModalProps {
   note: NoteItem;
   subjects: SubjectMeta[];
   onClose: () => void;
+  onDeleteNote?: (noteId: string) => void;
 }
 
 export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
   note,
   subjects,
   onClose,
+  onDeleteNote,
 }) => {
   const [activeTab, setActiveTab] = useState<'preview' | 'raw'>('preview');
   const [copied, setCopied] = useState(false);
@@ -54,12 +56,27 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5">
+            {onDeleteNote && (
+              <button
+                onClick={() => {
+                  playPopSound();
+                  if (window.confirm('Opravdu chceš smazat tento zápisek?')) {
+                    onDeleteNote(note.id);
+                    onClose();
+                  }
+                }}
+                title="Smazat zápisek"
+                className="p-2 rounded-duo border-2 border-duoGray-border hover:bg-red-50 text-[#ff4b4b] transition active:scale-95 cursor-pointer"
+              >
+                <Trash2 size={16} />
+              </button>
+            )}
             <button
               onClick={() => {
                 playPopSound();
                 onClose();
               }}
-              className="p-2 rounded-duo border-2 border-duoGray-border hover:bg-gray-100 text-duoGray-charcoal transition active:scale-95"
+              className="p-2 rounded-duo border-2 border-duoGray-border hover:bg-gray-100 text-duoGray-charcoal transition active:scale-95 cursor-pointer"
             >
               <X size={18} />
             </button>
