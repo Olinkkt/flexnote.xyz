@@ -3,7 +3,6 @@ import { SubjectType } from '../types/notes';
 export interface ExtractedNoteResult {
   title: string;
   subject: SubjectType | 'uncertain';
-  confidence: number;
   summary: string;
   markdown: string;
 }
@@ -50,21 +49,33 @@ export async function extractNoteFromImage(
     );
   }
 
-  const systemPrompt = `Jsi Flexnote AI OCR engine specializovaný na digitalizaci školních zápisků a sešitů do čistého Markdownu.
-Tvým úkolem je:
-1. Přečíst ručně psaný nebo tištěný text ze sešitu / fotografie.
-2. Všechny matematické, fyzikální a chemické vzorce převést do LaTeX / KaTeX notace (inline: $...$, blokové: $$...$$).
-3. Určit školní předmět: "maths" (matematika), "czech" (český jazyk / literatura), "history" (dějepis), "science" (přírodní vědy / fyzika / chemie), nebo "uncertain" pokud si nejsi jistý (např. málo textu, nejednoznačné).
-4. Vytvořit výstižný název (title) a krátké 1-2 věté shrnutí (summary) v češtině.
-5. Zformátovat celý obsah do přehledného Markdownu s nadpisy (#, ##, ###), odrážkami a zvýrazněním.
+  const systemPrompt = `Jsi Flexnote AI OCR engine specializovaný na převod fotografií školních sešitů do přehledného studijního Markdownu.
 
-Odpověz VÝHRADNĚ ve formátu JSON s následující strukturou (bez dalšího balastního textu okolo):
+Pravidla přepisu a formátování:
+1. PŘEPIS TEXTU:
+   - Přepiš čitelný text a oprav zjevné překlepy z rychlého psaní v hodině.
+   - Zcela ignoruj přeškrtnuté chyby a malůvky na okrajích.
+2. MATEMATIKA A VZORCE (KaTeX):
+   - Klíčové a samostatné rovnice vlož VŽDY do blokových závorek: $$...$$ (např. $$D = b^2 - 4ac$$).
+   - Proměnné a krátké výrazy v textu vlož do: $...$ (např. pro $x > 0$).
+   - U výpočtů s více kroky udržuj postup pod sebou.
+3. STRUKTURA A PŘEHLEDNOST:
+   - Používej nadpisy (# Hlavní téma, ## Podtémata).
+   - Důležité definice a poučky vlož do citace: > **Důležité:** ... (vytvoří přehledný zvýrazněný rámeček).
+   - Pokud jsou v sešitě srovnání, slovíčka nebo časové osy, zformátuj je do Markdown tabulky (| ... |).
+4. KLASIFIKACE PŘEDMĚTU:
+   - "maths" (matematika, geometrie)
+   - "czech" (čeština, literatura, mluvnice)
+   - "history" (dějepis, dějiny)
+   - "science" (fyzika, chemie, biologie, zeměpis)
+   - "uncertain" (pokud je text nejednoznačný nebo je ho příliš málo)
+
+Výstup musí být VÝHRADNĚ validní JSON v tomto formátu (žádný další text okolo):
 {
-  "title": "Název zápisku",
+  "title": "Výstižný název tématu",
   "subject": "maths" | "czech" | "history" | "science" | "uncertain",
-  "confidence": 95,
-  "summary": "Stručné shrnutí obsahu...",
-  "markdown": "# Název\\n\\nStrukturovaný text zápisků s KaTeX $vzorečky$..."
+  "summary": "Stručné shrnutí 1-2 větami...",
+  "markdown": "Kompletní strukturovaný zápisek v Markdownu s KaTeX vzorci"
 }`;
 
   let response: Response;
@@ -170,7 +181,6 @@ function parseModelOutput(content: string): ExtractedNoteResult {
     return {
       title: parsed.title || 'Digitalizovaný zápisek',
       subject,
-      confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 85,
       summary: parsed.summary || 'Zápisky převedené pomocí AI modelu Dots3-Note-Preview.',
       markdown: parsed.markdown || content,
     };
@@ -179,7 +189,6 @@ function parseModelOutput(content: string): ExtractedNoteResult {
     return {
       title: 'Digitalizovaný zápisek',
       subject: 'uncertain',
-      confidence: 60,
       summary: 'Automaticky rozpoznaný text ze sešitu.',
       markdown: content,
     };

@@ -15,7 +15,6 @@ interface ExtractedData {
   title: string;
   summary: string;
   markdown: string;
-  accuracy: number;
 }
 
 const AVAILABLE_CLASSES: { id: SubjectType; name: string }[] = [
@@ -57,7 +56,6 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote }) => 
         title: result.title,
         summary: result.summary,
         markdown: result.markdown,
-        accuracy: result.confidence,
       });
 
       if (result.subject === 'uncertain') {
@@ -104,7 +102,6 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote }) => 
           title: 'Goniometrie a pravoúhlý trojúhelník',
           summary: 'Převedený zápisek z fotky sešitu do předmětu matematika.',
           markdown: `# Goniometrie a pravoúhlý trojúhelník\n\n## 1. Základní vztahy v trojúhelníku\n- $\\sin(\\alpha) = \\frac{a}{c}$\n- $\\cos(\\alpha) = \\frac{b}{c}$\n- $\\text{tg}(\\alpha) = \\frac{a}{b}$\n\n## 2. Pythagorova věta\n$$a^2 + b^2 = c^2$$`,
-          accuracy: 99,
         });
       }
       playSuccessChime();
@@ -129,7 +126,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote }) => 
       timestamp: Date.now(),
       thumbnailUrl: previewImage,
       readingTime: '2 min',
-      accuracy: extractedData?.accuracy ?? (isAiUncertain ? 85 : 99),
+      accuracy: 98,
       status: 'new',
       summary: extractedData?.summary || `Převedený zápisek z fotky sešitu do předmětu ${selectedSubject}.`,
       tags: [selectedSubject, 'Zápisky', 'Nový'],
