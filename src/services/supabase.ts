@@ -88,7 +88,9 @@ export interface UserProfile {
   id: string;
   email: string | null;
   full_name: string | null;
+  username: string | null;
   school: string | null;
+  grade: string | null;
   avatar_url: string | null;
   streak_days: number | null;
   diamonds: number | null;
@@ -161,6 +163,48 @@ export async function fetchUserProfile(userId: string): Promise<UserProfile | nu
     return null;
   }
   return data as UserProfile;
+}
+
+/**
+ * Update user profile in Supabase
+ */
+export async function updateUserProfile(
+  userId: string,
+  updates: Partial<Pick<UserProfile, 'full_name' | 'username' | 'school' | 'grade'>>
+): Promise<UserProfile> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({
+      ...updates,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', userId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Failed to update user profile:', error.message);
+    throw error;
+  }
+
+  return data as UserProfile;
+}
+
+/**
+ * Check if a username is available (not taken by another user)
+ */
+export async function checkUsernameAvailability(
+  username: string,
+  currentUserId?: string
+): Promise<boolean> {
+  const clean = username.trim().toLowerCase();
+  let query = supabase.from('profiles').select('id').eq('username', clean);
+  if (currentUserId) {
+    query = query.neq('id', currentUserId);
+  }
+  const { data, error } = await query;
+  if (error) throw error;
+  return !data || data.length === 0;
 }
 
 /**

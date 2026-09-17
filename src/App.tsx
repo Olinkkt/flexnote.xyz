@@ -265,6 +265,7 @@ export const App: React.FC = () => {
                 profile={userProfile}
                 totalNotes={notes.length}
                 onSignOut={handleSignOut}
+                onUpdateProfile={(updated) => setUserProfile(updated)}
               />
             )}
           </main>

@@ -61,11 +61,13 @@ export type Database = {
           diamonds: number | null
           email: string | null
           full_name: string | null
+          grade: string | null
           id: string
           school: string | null
           streak_days: number | null
           study_time_seconds: number | null
           updated_at: string | null
+          username: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -73,11 +75,13 @@ export type Database = {
           diamonds?: number | null
           email?: string | null
           full_name?: string | null
+          grade?: string | null
           id: string
           school?: string | null
           streak_days?: number | null
           study_time_seconds?: number | null
           updated_at?: string | null
+          username?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -85,11 +89,13 @@ export type Database = {
           diamonds?: number | null
           email?: string | null
           full_name?: string | null
+          grade?: string | null
           id?: string
           school?: string | null
           streak_days?: number | null
           study_time_seconds?: number | null
           updated_at?: string | null
+          username?: string | null
         }
         Relationships: []
       }
