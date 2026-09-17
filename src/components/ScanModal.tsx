@@ -3,10 +3,19 @@ import { Camera, X, Loader2, Sparkles, FileText, ArrowRight, HelpCircle, Chevron
 import { NoteItem, SubjectType } from '../types/notes';
 import { playPopSound, playSuccessChime } from '../utils/audio';
 import { SubjectIcon } from './SubjectIcon';
+import { Toast, ToastProps } from './Toast';
+import { fileToBase64, extractNoteFromImage } from '../services/openrouter';
 
 interface ScanModalProps {
   onClose: () => void;
   onSaveNote: (newNote: NoteItem) => void;
+}
+
+interface ExtractedData {
+  title: string;
+  summary: string;
+  markdown: string;
+  accuracy: number;
 }
 
 const AVAILABLE_CLASSES: { id: SubjectType; name: string }[] = [
@@ -18,37 +27,88 @@ const AVAILABLE_CLASSES: { id: SubjectType; name: string }[] = [
 
 export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote }) => {
   const [status, setStatus] = useState<'idle' | 'processing' | 'ready'>('idle');
+  const [processingMessage, setProcessingMessage] = useState('Model Dots3-Note čte text a KaTeX vzorce...');
   const [selectedSubject, setSelectedSubject] = useState<SubjectType | null>(null);
   const [isAiUncertain, setIsAiUncertain] = useState<boolean>(false);
   const [previewImage, setPreviewImage] = useState<string>(
     'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=500&auto=format&fit=crop&q=80'
   );
+  const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
+  const [toast, setToast] = useState<Omit<ToastProps, 'onClose'> | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const processPhoto = (imgUrl: string, forceUncertain = false) => {
-    setPreviewImage(imgUrl);
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
     setStatus('processing');
+    setProcessingMessage('Model Dots3-Note analyzuje sešit...');
+    playPopSound();
+
+    try {
+      const base64 = await fileToBase64(file);
+      setPreviewImage(base64);
+
+      setProcessingMessage('Dots3-Note čte text a převádí vzorce do KaTeXu...');
+      const result = await extractNoteFromImage(base64);
+
+      setExtractedData({
+        title: result.title,
+        summary: result.summary,
+        markdown: result.markdown,
+        accuracy: result.confidence,
+      });
+
+      if (result.subject === 'uncertain') {
+        setIsAiUncertain(true);
+        setSelectedSubject(null);
+      } else {
+        setIsAiUncertain(false);
+        setSelectedSubject(result.subject);
+      }
+
+      setStatus('ready');
+      playSuccessChime();
+    } catch (err: unknown) {
+      setStatus('idle');
+      const msg = err instanceof Error ? err.message : String(err);
+      setToast({
+        type: 'error',
+        title: 'Chyba při digitalizaci zápisku',
+        message: msg,
+      });
+    } finally {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const processDemo = (forceUncertain = false) => {
+    setPreviewImage('https://images.unsplash.com/photo-1509228468518-180dd4864904?w=500&auto=format&fit=crop&q=80');
+    setStatus('processing');
+    setProcessingMessage('Simuluji digitalizaci zápisku...');
     playPopSound();
 
     setTimeout(() => {
       setStatus('ready');
       if (forceUncertain) {
         setIsAiUncertain(true);
-        setSelectedSubject(null); // Requires user selection!
+        setSelectedSubject(null);
+        setExtractedData(null);
       } else {
         setIsAiUncertain(false);
-        setSelectedSubject('maths'); // High confidence auto-detection
+        setSelectedSubject('maths');
+        setExtractedData({
+          title: 'Goniometrie a pravoúhlý trojúhelník',
+          summary: 'Převedený zápisek z fotky sešitu do předmětu matematika.',
+          markdown: `# Goniometrie a pravoúhlý trojúhelník\n\n## 1. Základní vztahy v trojúhelníku\n- $\\sin(\\alpha) = \\frac{a}{c}$\n- $\\cos(\\alpha) = \\frac{b}{c}$\n- $\\text{tg}(\\alpha) = \\frac{a}{b}$\n\n## 2. Pythagorova věta\n$$a^2 + b^2 = c^2$$`,
+          accuracy: 99,
+        });
       }
       playSuccessChime();
-    }, 700);
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const url = URL.createObjectURL(file);
-      processPhoto(url);
-    }
+    }, 600);
   };
 
   const handleSave = () => {
@@ -57,30 +117,23 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote }) => 
     playSuccessChime();
     const newNote: NoteItem = {
       id: `note-${Date.now()}`,
-      title: selectedSubject === 'maths'
+      title: extractedData?.title || (selectedSubject === 'maths'
         ? 'Goniometrie a pravoúhlý trojúhelník'
         : selectedSubject === 'czech'
         ? 'Pravopis a větné členy'
         : selectedSubject === 'history'
         ? 'Historický přehled panovníků'
-        : 'Obecné zápisky z hodiny',
+        : 'Obecné zápisky z hodiny'),
       subject: selectedSubject,
       date: 'Právě teď',
       timestamp: Date.now(),
       thumbnailUrl: previewImage,
       readingTime: '2 min',
-      accuracy: isAiUncertain ? 85 : 99,
+      accuracy: extractedData?.accuracy ?? (isAiUncertain ? 85 : 99),
       status: 'new',
-      summary: `Převedený zápisek z fotky sešitu do předmětu ${selectedSubject}.`,
+      summary: extractedData?.summary || `Převedený zápisek z fotky sešitu do předmětu ${selectedSubject}.`,
       tags: [selectedSubject, 'Zápisky', 'Nový'],
-      markdown: `# Zápisky z hodiny
-
-Zápisek převedený z fotky z mobilního telefonu.
-
-## 1. Hlavní body
-- Automaticky digitalizovaný text ze sešitu.
-- Přeformátováno do čistého Markdownu.
-- Předmět: **${AVAILABLE_CLASSES.find(c => c.id === selectedSubject)?.name || selectedSubject}**`,
+      markdown: extractedData?.markdown || `# Zápisky z hodiny\n\n- Digitalizovaný text ze sešitu.\n- Předmět: **${AVAILABLE_CLASSES.find(c => c.id === selectedSubject)?.name || selectedSubject}**`,
     };
 
     onSaveNote(newNote);
@@ -134,18 +187,18 @@ Zápisek převedený z fotky z mobilního telefonu.
               {/* Demo test buttons */}
               <div className="flex flex-col gap-1.5 w-full pt-1">
                 <button
-                  onClick={() => processPhoto(previewImage, false)}
+                  onClick={() => processDemo(false)}
                   className="text-xs font-feather font-bold text-sparkBlue hover:underline py-1 cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   <Zap size={13} className="text-sparkBlue fill-sparkBlue" />
-                  <span>Zkusit s jasným předmětem (Automatická detekce)</span>
+                  <span>Zkusit demo s jasným předmětem</span>
                 </button>
                 <button
-                  onClick={() => processPhoto(previewImage, true)}
+                  onClick={() => processDemo(true)}
                   className="text-xs font-feather font-bold text-duoGray-pencil hover:text-duoGray-charcoal hover:underline py-1 cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   <HelpCircle size={13} />
-                  <span>Zkusit s nejasným kontextem (Výběr třídy uživatelem)</span>
+                  <span>Zkusit demo s nejasným kontextem</span>
                 </button>
               </div>
             </div>
@@ -155,10 +208,10 @@ Zápisek převedený z fotky z mobilního telefonu.
             <div className="py-8 flex flex-col items-center justify-center text-center">
               <Loader2 size={36} className="text-eagerGreen animate-spin mb-3 stroke-[2.5]" />
               <div className="font-feather font-black text-sm text-duoGray-charcoal mb-1">
-                Převádím fotku na .md...
+                {processingMessage}
               </div>
-              <span className="text-xs text-duoGray-pencil font-medium">
-                Čtu text ze sešitu a analyzuji předmět
+              <span className="text-[11px] text-duoGray-pencil font-medium bg-gray-100 px-2.5 py-0.5 rounded-full mt-1 font-mono">
+                dots-studio/dots-3-note-preview:free
               </span>
             </div>
           )}
@@ -237,13 +290,15 @@ Zápisek převedený z fotky z mobilního telefonu.
 
               {/* Note Preview */}
               <div className="duo-card p-3 mb-4 bg-white">
-                <div className="flex items-center gap-1.5 text-xs font-feather font-black text-duoGray-charcoal mb-1">
-                  <FileText size={14} className="text-sparkBlue" />
-                  <span>Náhled převedeného .md souboru</span>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-1.5 text-xs font-feather font-black text-duoGray-charcoal">
+                    <FileText size={14} className="text-sparkBlue" />
+                    <span>{extractedData?.title || 'Náhled převedeného .md souboru'}</span>
+                  </div>
                 </div>
-                <div className="bg-[#f7f7f7] border-2 border-duoGray-border text-duoGray-charcoal p-2.5 rounded-xl font-mono text-[11px] max-h-32 overflow-y-auto">
+                <div className="bg-[#f7f7f7] border-2 border-duoGray-border text-duoGray-charcoal p-2.5 rounded-xl font-mono text-[11px] max-h-36 overflow-y-auto">
                   <pre className="whitespace-pre-wrap">
-                    {`# Zápisky z hodiny\n\n- Automaticky digitalizovaný text ze sešitu.\n- Třída: ${
+                    {extractedData?.markdown || `# Zápisky z hodiny\n\n- Automaticky digitalizovaný text ze sešitu.\n- Třída: ${
                       selectedSubject ? AVAILABLE_CLASSES.find(c => c.id === selectedSubject)?.name : '(Zatím nevybráno)'
                     }`}
                   </pre>
@@ -267,6 +322,16 @@ Zápisek převedený z fotky z mobilního telefonu.
           )}
         </div>
       </div>
+
+      {/* Global Toast for Errors */}
+      {toast && (
+        <Toast
+          type={toast.type}
+          title={toast.title}
+          message={toast.message}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 };
