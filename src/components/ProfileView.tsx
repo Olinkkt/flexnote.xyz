@@ -75,9 +75,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           <p className="text-xs font-bold text-duoGray-pencil truncate">
             {user.email}
           </p>
-          <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-feather font-black bg-storybookGreen text-eagerGreen-dark border border-eagerGreen/30">
-            Student Flexnote
-          </span>
         </div>
       </div>
 
@@ -116,14 +113,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       <div className="duo-card p-3.5 bg-white flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <span className="w-2.5 h-2.5 rounded-full bg-eagerGreen animate-pulse"></span>
-          <div>
-            <div className="font-feather font-black text-xs text-duoGray-charcoal">
-              Cloudová synchronizace
-            </div>
-            <div className="text-[10px] font-bold text-duoGray-pencil">
-              Supabase PostgreSQL aktivní
-            </div>
-          </div>
+          <span className="font-feather font-black text-xs text-duoGray-charcoal">
+            Cloudová synchronizace
+          </span>
         </div>
         <span className="text-[11px] font-feather font-black text-eagerGreen bg-storybookGreen px-2 py-0.5 rounded-full border border-eagerGreen/30">
           Online
