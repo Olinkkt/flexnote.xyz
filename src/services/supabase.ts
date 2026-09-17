@@ -184,3 +184,41 @@ export async function checkCurrentUserVerification(): Promise<User | null> {
   return user;
 }
 
+/**
+ * Upload note image to Supabase Storage bucket 'notes-media'
+ * Returns the public CDN URL of the uploaded image.
+ */
+export async function uploadNoteImage(
+  file: File | Blob,
+  userId?: string,
+  fileName?: string
+): Promise<string> {
+  const ext =
+    file instanceof File && file.name.includes('.')
+      ? file.name.split('.').pop()?.toLowerCase() || 'jpg'
+      : 'jpg';
+
+  const userFolder = userId || 'shared';
+  const uniqueName = fileName || `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${ext}`;
+  const filePath = `${userFolder}/${uniqueName}`;
+
+  const { data, error } = await supabase.storage
+    .from('notes-media')
+    .upload(filePath, file, {
+      contentType: file.type || 'image/jpeg',
+      cacheControl: '3600',
+      upsert: true,
+    });
+
+  if (error) {
+    console.error('Failed to upload note image to Supabase Storage:', error.message);
+    throw error;
+  }
+
+  const { data: publicUrlData } = supabase.storage
+    .from('notes-media')
+    .getPublicUrl(data.path);
+
+  return publicUrlData.publicUrl;
+}
+

@@ -5,10 +5,12 @@ import { playPopSound, playSuccessChime } from '../utils/audio';
 import { SubjectIcon } from './SubjectIcon';
 import { Toast, ToastProps } from './Toast';
 import { fileToBase64, extractNoteFromImage } from '../services/openrouter';
+import { uploadNoteImage } from '../services/supabase';
 
 interface ScanModalProps {
   onClose: () => void;
   onSaveNote: (newNote: NoteItem) => void;
+  userId?: string;
 }
 
 interface ExtractedData {
@@ -24,7 +26,7 @@ const AVAILABLE_CLASSES: { id: SubjectType; name: string }[] = [
   { id: 'science', name: 'Přírodní vědy' },
 ];
 
-export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote }) => {
+export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote, userId }) => {
   const [status, setStatus] = useState<'idle' | 'processing' | 'ready'>('idle');
   const [processingMessage, setProcessingMessage] = useState('Model Dots3-Note čte text a KaTeX vzorce...');
   const [selectedSubject, setSelectedSubject] = useState<SubjectType | null>(null);
@@ -34,6 +36,8 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote }) => 
   );
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
   const [toast, setToast] = useState<Omit<ToastProps, 'onClose'> | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -41,6 +45,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote }) => 
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setSelectedFile(file);
     setStatus('processing');
     setProcessingMessage('Model Dots3-Note analyzuje sešit...');
     playPopSound();
@@ -108,8 +113,25 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote }) => 
     }, 600);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!selectedSubject) return;
+
+    let finalThumbnailUrl = previewImage;
+
+    // If student selected or took a real photo, upload to Supabase Storage
+    if (selectedFile) {
+      setIsUploadingImage(true);
+      try {
+        const publicUrl = await uploadNoteImage(selectedFile, userId);
+        if (publicUrl) {
+          finalThumbnailUrl = publicUrl;
+        }
+      } catch (err) {
+        console.warn('Could not upload note image to Supabase Storage, using fallback:', err);
+      } finally {
+        setIsUploadingImage(false);
+      }
+    }
 
     playSuccessChime();
     const newNote: NoteItem = {
@@ -124,7 +146,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote }) => 
       subject: selectedSubject,
       date: 'Právě teď',
       timestamp: Date.now(),
-      thumbnailUrl: previewImage,
+      thumbnailUrl: finalThumbnailUrl,
       readingTime: '2 min',
       accuracy: 98,
       status: 'new',
@@ -302,18 +324,27 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote }) => 
                 </div>
               </div>
 
-              {/* Save Button (disabled until a subject is picked) */}
+              {/* Save Button (disabled until a subject is picked or uploading) */}
               <button
                 onClick={handleSave}
-                disabled={!selectedSubject}
+                disabled={!selectedSubject || isUploadingImage}
                 className={`w-full duo-btn py-3 px-4 text-xs font-feather font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm transition-all ${
-                  selectedSubject
+                  selectedSubject && !isUploadingImage
                     ? 'duo-btn-green cursor-pointer'
                     : 'bg-gray-200 text-gray-400 border-b-4 border-gray-300 cursor-not-allowed'
                 }`}
               >
-                <span>{selectedSubject ? 'Uložit do zápisků' : 'Nejdříve zvol předmět'}</span>
-                <ArrowRight size={16} />
+                {isUploadingImage ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    <span>Nahrávám fotografii do cloudu...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>{selectedSubject ? 'Uložit do zápisků' : 'Nejdříve zvol předmět'}</span>
+                    <ArrowRight size={16} />
+                  </>
+                )}
               </button>
             </div>
           )}

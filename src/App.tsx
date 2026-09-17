@@ -281,6 +281,7 @@ export const App: React.FC = () => {
             <ScanModal
               onClose={() => setScanModalOpen(false)}
               onSaveNote={handleSaveScannedNote}
+              userId={user?.id}
             />
           )}
 
