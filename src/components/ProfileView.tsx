@@ -4,10 +4,9 @@ import { UserProfile, signOutUser } from '../services/supabase';
 import { playPopSound } from '../utils/audio';
 
 interface ProfileViewProps {
-  user: { id: string; email?: string } | null;
+  user: { id: string; email?: string };
   profile: UserProfile | null;
   totalNotes: number;
-  onOpenAuth: () => void;
   onSignOut: () => void;
 }
 
@@ -15,7 +14,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   user,
   profile,
   totalNotes,
-  onOpenAuth,
   onSignOut,
 }) => {
   const handleSignOut = async () => {
@@ -27,33 +25,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       console.error('Error signing out:', err);
     }
   };
-
-  if (!user) {
-    return (
-      <div className="p-5 flex flex-col items-center text-center animate-in fade-in duration-150">
-        <div className="w-20 h-20 rounded-full bg-storybookGreen border-2 border-eagerGreen flex items-center justify-center text-eagerGreen mb-4 shadow-sm">
-          <User size={40} className="stroke-[2.5]" />
-        </div>
-
-        <h3 className="font-feather font-black text-lg text-duoGray-charcoal mb-1">
-          Vytvoř si profil na Flexnote
-        </h3>
-        <p className="text-xs text-duoGray-pencil font-medium max-w-[280px] mb-6 leading-relaxed">
-          Měj své zápisky ze sešitů bezpečně v cloudu na mobilu i počítači a sbírej drahokamy za studium.
-        </p>
-
-        <button
-          onClick={() => {
-            playPopSound();
-            onOpenAuth();
-          }}
-          className="w-full duo-btn duo-btn-green py-3 px-6 text-xs font-feather font-black uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-xs"
-        >
-          <span>Přihlásit se nebo vytvořit účet</span>
-        </button>
-      </div>
-    );
-  }
 
   const displayName = profile?.full_name || user.email?.split('@')[0] || 'Student';
   const initial = displayName.charAt(0).toUpperCase();

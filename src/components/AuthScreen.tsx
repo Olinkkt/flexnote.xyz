@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
-import { X, Mail, Lock, User, Loader2, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Mail, Lock, User, Loader2, ArrowRight, BookOpen, Sparkles, Camera, Cloud, CheckCircle2 } from 'lucide-react';
 import { playPopSound, playSuccessChime } from '../utils/audio';
 import { signInWithEmail, signUpWithEmail, signInWithGoogle } from '../services/supabase';
 
-interface AuthModalProps {
-  onClose: () => void;
-  onSuccess: () => void;
+interface AuthScreenProps {
+  onSuccess?: () => void;
 }
 
-export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
+export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess }) => {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -40,21 +39,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
         playSuccessChime();
         setSignupSuccess(true);
         setTimeout(() => {
-          onSuccess();
-          onClose();
+          onSuccess?.();
         }, 1500);
       } else {
         await signInWithEmail(email, password);
         playSuccessChime();
-        onSuccess();
-        onClose();
+        onSuccess?.();
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes('Invalid login credentials')) {
         setErrorMessage('Nesprávný e-mail nebo heslo.');
       } else if (msg.includes('User already registered')) {
-        setErrorMessage('Uživatel s tímto e-mailem již existuje. Zvol přihlášení.');
+        setErrorMessage('Účet s tímto e-mailem již existuje. Zvol přihlášení.');
       } else if (msg.includes('Password should be at least')) {
         setErrorMessage('Heslo musí mít alespoň 6 znaků.');
       } else {
@@ -76,26 +73,65 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 backdrop-blur-xs animate-in fade-in duration-100">
-      <div className="w-full md:max-w-[402px] bg-white rounded-t-[32px] md:rounded-3xl flex flex-col overflow-hidden shadow-2xl border-t-2 md:border-2 border-duoGray-border animate-in slide-in-from-bottom-6 duration-150 p-5">
-        {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
-          <h3 className="font-feather font-black text-[18px] text-duoGray-charcoal">
-            {mode === 'signin' ? 'Přihlášení do Flexnote' : 'Vytvořit profil zdarma'}
-          </h3>
-          <button
-            onClick={() => {
-              playPopSound();
-              onClose();
-            }}
-            className="p-1.5 rounded-duo border-2 border-duoGray-border hover:bg-gray-100 text-duoGray-charcoal transition cursor-pointer"
-          >
-            <X size={18} />
-          </button>
+    <div className="flex-1 flex flex-col justify-between overflow-y-auto px-5 py-6 select-none bg-white animate-in fade-in duration-200">
+      {/* Top Branding Section */}
+      <div className="flex flex-col items-center text-center pt-2">
+        <div className="relative mb-3">
+          <div className="w-20 h-20 rounded-3xl bg-eagerGreen border-2 border-b-6 border-eagerGreen-dark flex items-center justify-center text-white shadow-md shadow-eagerGreen/20">
+            <BookOpen size={42} className="stroke-[2.5]" />
+          </div>
+          <div className="absolute -top-1.5 -right-1.5 w-7 h-7 rounded-full bg-lemon border-2 border-b-3 border-lemon-dark flex items-center justify-center text-duoGray-charcoal shadow-xs">
+            <Sparkles size={14} className="stroke-[2.5]" />
+          </div>
         </div>
 
-        {/* Tab switch */}
-        <div className="grid grid-cols-2 p-1 bg-gray-100 rounded-2xl mb-4 border border-duoGray-border">
+        <h1 className="font-feather font-black text-2xl text-duoGray-charcoal tracking-tight">
+          Flexnote
+        </h1>
+        <p className="text-xs text-duoGray-pencil font-bold max-w-[280px] mt-1 leading-relaxed">
+          Chytré zápisky ze sešitů v cloudu s AI a KaTeX matematikou
+        </p>
+
+        {/* 3 Value Proposition Micro-Cards */}
+        <div className="grid grid-cols-3 gap-2 w-full mt-4 mb-3">
+          <div className="duo-card p-2 bg-[#f7f9fa] border-duoGray-border flex flex-col items-center text-center">
+            <Camera size={16} className="text-sparkBlue stroke-[2.5] mb-1" />
+            <span className="text-[10px] font-feather font-black text-duoGray-charcoal leading-tight">
+              AI OCR
+            </span>
+            <span className="text-[8.5px] font-bold text-duoGray-pencil leading-none mt-0.5">
+              Ze sešitu
+            </span>
+          </div>
+
+          <div className="duo-card p-2 bg-[#f7f9fa] border-duoGray-border flex flex-col items-center text-center">
+            <span className="font-serif italic font-bold text-xs text-eagerGreen leading-none mb-1">
+              fx
+            </span>
+            <span className="text-[10px] font-feather font-black text-duoGray-charcoal leading-tight">
+              KaTeX
+            </span>
+            <span className="text-[8.5px] font-bold text-duoGray-pencil leading-none mt-0.5">
+              Matematika
+            </span>
+          </div>
+
+          <div className="duo-card p-2 bg-[#f7f9fa] border-duoGray-border flex flex-col items-center text-center">
+            <Cloud size={16} className="text-macawBlue stroke-[2.5] mb-1" />
+            <span className="text-[10px] font-feather font-black text-duoGray-charcoal leading-tight">
+              Cloud
+            </span>
+            <span className="text-[8.5px] font-bold text-duoGray-pencil leading-none mt-0.5">
+              Záloha
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Center Auth Card */}
+      <div className="w-full my-auto">
+        {/* Mode Selector Tabs */}
+        <div className="grid grid-cols-2 p-1 bg-gray-100 rounded-2xl mb-3.5 border border-duoGray-border">
           <button
             type="button"
             onClick={() => {
@@ -132,16 +168,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
           <div className="py-8 flex flex-col items-center text-center animate-in zoom-in-95">
             <CheckCircle2 size={48} className="text-eagerGreen mb-2 stroke-[2.5]" />
             <h4 className="font-feather font-black text-sm text-duoGray-charcoal mb-1">
-              Profil byl úspěšně vytvořen!
+              Účet byl úspěšně vytvořen!
             </h4>
-            <p className="text-xs text-duoGray-pencil">
-              Přihlašuji tě do Flexnote...
+            <p className="text-xs text-duoGray-pencil font-bold">
+              Připravuji tvůj studijní prostor...
             </p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-2.5">
             {errorMessage && (
-              <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-[#d93838] text-xs font-bold leading-tight">
+              <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-[#d93838] text-xs font-bold leading-tight animate-in fade-in">
                 {errorMessage}
               </div>
             )}
@@ -207,7 +243,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
                 <Loader2 size={16} className="animate-spin" />
               ) : (
                 <>
-                  <span>{mode === 'signin' ? 'Přihlásit se' : 'Vytvořit účet'}</span>
+                  <span>{mode === 'signin' ? 'Přihlásit se' : 'Vytvořit účet zdarma'}</span>
                   <ArrowRight size={16} />
                 </>
               )}
@@ -250,6 +286,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onSuccess }) => {
             </button>
           </form>
         )}
+      </div>
+
+      {/* Footer Info */}
+      <div className="text-center pt-2 text-[10px] text-duoGray-faded font-bold">
+        Bezpečné přihlášení s cloudem Supabase
       </div>
     </div>
   );

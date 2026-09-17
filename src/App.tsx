@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { BookOpen } from 'lucide-react';
 import { MobileFrame } from './components/MobileFrame';
 import { TopHeader } from './components/TopHeader';
 import { RecentNotesList } from './components/RecentNotesList';
@@ -10,7 +11,7 @@ import { NotesLibraryView } from './components/NotesLibraryView';
 import { SUBJECTS, INITIAL_NOTES } from './data/mockNotes';
 import { NoteItem, SubjectType } from './types/notes';
 import { supabase, fetchNotesFromCloud, saveNoteToCloud, deleteNoteFromCloud, fetchUserProfile, UserProfile } from './services/supabase';
-import { AuthModal } from './components/AuthModal';
+import { AuthScreen } from './components/AuthScreen';
 import { ProfileView } from './components/ProfileView';
 
 const STORAGE_KEY = 'duo_notes_v1_data';
@@ -34,7 +35,7 @@ export const App: React.FC = () => {
   // Auth & Profile State
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
 
   // Sync Supabase Auth and Notes on mount & auth changes
   useEffect(() => {
@@ -47,12 +48,10 @@ export const App: React.FC = () => {
         fetchNotesFromCloud(currentUser.id).then((cloudNotes) => {
           if (cloudNotes && cloudNotes.length > 0) setNotes(cloudNotes);
         });
-      } else {
-        // Load general cloud notes or keep local
-        fetchNotesFromCloud().then((cloudNotes) => {
-          if (cloudNotes && cloudNotes.length > 0) setNotes(cloudNotes);
-        }).catch(() => {});
       }
+      setAuthLoading(false);
+    }).catch(() => {
+      setAuthLoading(false);
     });
 
     // 2. Listen to auth state changes (login, signup, logout)
@@ -67,6 +66,7 @@ export const App: React.FC = () => {
       } else {
         setUserProfile(null);
       }
+      setAuthLoading(false);
     });
 
     return () => {
@@ -120,85 +120,94 @@ export const App: React.FC = () => {
 
   return (
     <MobileFrame activeSubjectName={activeMeta.czechName}>
-      {/* Top Header with App Title on left and Class Switcher Dropdown on right */}
-      <TopHeader
-        subjects={SUBJECTS}
-        selectedSubject={selectedSubject}
-        onSelectSubject={(subj) => setSelectedSubject(subj)}
-        totalNotes={notes.length}
-      />
-
-      {/* Main Content Area */}
-      <main className="pb-8 pt-2">
-        {activeTab === 'notes' && (
-          <div>
-            {/* Poslední zápisky Section */}
-            <RecentNotesList
-              notes={displayNotes}
-              subjects={SUBJECTS}
-              selectedSubjectName={activeMeta.name}
-              onSelectNote={(note) => setSelectedNote(note)}
-              onOpenScan={() => setScanModalOpen(true)}
-            />
+      {authLoading ? (
+        <div className="flex-1 flex flex-col items-center justify-center p-8 bg-white text-center select-none animate-in fade-in">
+          <div className="w-16 h-16 rounded-2xl bg-eagerGreen border-b-4 border-eagerGreen-dark flex items-center justify-center text-white mb-4 animate-bounce shadow-md">
+            <BookOpen size={32} className="stroke-[2.5]" />
           </div>
-        )}
-
-        {activeTab === 'search' && (
-          <NotesLibraryView
-            notes={notes}
+          <h2 className="font-feather font-black text-xl text-duoGray-charcoal">
+            Flexnote
+          </h2>
+          <p className="text-xs font-bold text-duoGray-pencil mt-1 animate-pulse">
+            Načítám tvůj sešit...
+          </p>
+        </div>
+      ) : !user ? (
+        <AuthScreen />
+      ) : (
+        <>
+          {/* Top Header with App Title on left and Class Switcher Dropdown on right */}
+          <TopHeader
             subjects={SUBJECTS}
             selectedSubject={selectedSubject}
-            onSelectSubject={setSelectedSubject}
-            onSelectNote={(note) => setSelectedNote(note)}
+            onSelectSubject={(subj) => setSelectedSubject(subj)}
+            totalNotes={notes.length}
+          />
+
+          {/* Main Content Area */}
+          <main className="pb-8 pt-2">
+            {activeTab === 'notes' && (
+              <div>
+                {/* Poslední zápisky Section */}
+                <RecentNotesList
+                  notes={displayNotes}
+                  subjects={SUBJECTS}
+                  selectedSubjectName={activeMeta.name}
+                  onSelectNote={(note) => setSelectedNote(note)}
+                  onOpenScan={() => setScanModalOpen(true)}
+                />
+              </div>
+            )}
+
+            {activeTab === 'search' && (
+              <NotesLibraryView
+                notes={notes}
+                subjects={SUBJECTS}
+                selectedSubject={selectedSubject}
+                onSelectSubject={setSelectedSubject}
+                onSelectNote={(note) => setSelectedNote(note)}
+                onOpenScan={() => setScanModalOpen(true)}
+              />
+            )}
+
+            {activeTab === 'profile' && (
+              <ProfileView
+                user={user}
+                profile={userProfile}
+                totalNotes={notes.length}
+                onSignOut={() => {
+                  setUser(null);
+                  setUserProfile(null);
+                }}
+              />
+            )}
+          </main>
+
+          {/* Bottom Bar */}
+          <BottomNav
+            activeTab={activeTab}
+            onTabChange={(tab) => setActiveTab(tab)}
             onOpenScan={() => setScanModalOpen(true)}
           />
-        )}
 
-        {activeTab === 'profile' && (
-          <ProfileView
-            user={user}
-            profile={userProfile}
-            totalNotes={notes.length}
-            onOpenAuth={() => setAuthModalOpen(true)}
-            onSignOut={() => {
-              setUser(null);
-              setUserProfile(null);
-            }}
-          />
-        )}
-      </main>
+          {/* Camera / Scan Modal */}
+          {scanModalOpen && (
+            <ScanModal
+              onClose={() => setScanModalOpen(false)}
+              onSaveNote={handleSaveScannedNote}
+            />
+          )}
 
-      {/* Bottom Bar */}
-      <BottomNav
-        activeTab={activeTab}
-        onTabChange={(tab) => setActiveTab(tab)}
-        onOpenScan={() => setScanModalOpen(true)}
-      />
-
-      {/* Camera / Scan Modal */}
-      {scanModalOpen && (
-        <ScanModal
-          onClose={() => setScanModalOpen(false)}
-          onSaveNote={handleSaveScannedNote}
-        />
-      )}
-
-      {/* Note Detail & Markdown Modal */}
-      {selectedNote && (
-        <NoteDetailModal
-          note={selectedNote}
-          subjects={SUBJECTS}
-          onClose={() => setSelectedNote(null)}
-          onDeleteNote={handleDeleteNote}
-        />
-      )}
-
-      {/* Auth Sign-In / Sign-Up Modal */}
-      {authModalOpen && (
-        <AuthModal
-          onClose={() => setAuthModalOpen(false)}
-          onSuccess={() => setAuthModalOpen(false)}
-        />
+          {/* Note Detail & Markdown Modal */}
+          {selectedNote && (
+            <NoteDetailModal
+              note={selectedNote}
+              subjects={SUBJECTS}
+              onClose={() => setSelectedNote(null)}
+              onDeleteNote={handleDeleteNote}
+            />
+          )}
+        </>
       )}
     </MobileFrame>
   );
