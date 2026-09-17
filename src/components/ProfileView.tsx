@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  User,
   LogOut,
   Sparkles,
   BookOpen,
@@ -11,6 +10,7 @@ import {
   Loader2,
   Check,
   AtSign,
+  User,
   GraduationCap,
 } from 'lucide-react';
 import { UserProfile, signOutUser, updateUserProfile, checkUsernameAvailability } from '../services/supabase';
@@ -24,19 +24,19 @@ interface ProfileViewProps {
   onUpdateProfile?: (updated: UserProfile) => void;
 }
 
-const COMMON_GRADES = [
-  '1. ročník',
-  '2. ročník',
-  '3. ročník',
-  '4. ročník',
-  'Prima',
-  'Sekunda',
-  'Tercie',
-  'Kvarta',
-  'Kvinta',
-  'Sexta',
-  'Septima',
-  'Oktáva',
+const GRADE_CATEGORIES = [
+  {
+    name: 'Základní škola (ZŠ)',
+    grades: ['6. třída', '7. třída', '8. třída', '9. třída'],
+  },
+  {
+    name: 'Střední škola & SOU',
+    grades: ['1. ročník', '2. ročník', '3. ročník', '4. ročník'],
+  },
+  {
+    name: 'Víceleté gymnázium',
+    grades: ['Prima', 'Sekunda', 'Tercie', 'Kvarta', 'Kvinta', 'Sexta', 'Septima', 'Oktáva'],
+  },
 ];
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
@@ -122,69 +122,49 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   };
 
   const displayName = profile?.full_name || user.email?.split('@')[0] || 'Student';
-  const displayUsername = profile?.username ? `@${profile.username}` : `@${user.email?.split('@')[0] || 'student'}`;
   const initial = displayName.charAt(0).toUpperCase();
+
+  const schoolGradeText =
+    profile?.school || profile?.grade
+      ? `${profile.school || 'Škola'}${profile.grade ? ` • ${profile.grade}` : ''}`
+      : 'Škola a ročník nezadány';
 
   return (
     <div className="p-4 flex flex-col gap-3.5 animate-in fade-in duration-150 select-none">
-      {/* Profile Card */}
-      <div className="duo-card p-4 bg-white flex items-center gap-3.5 relative">
-        <div className="w-14 h-14 rounded-2xl bg-eagerGreen border-b-4 border-eagerGreen-dark flex items-center justify-center text-white font-feather font-black text-xl shadow-xs shrink-0">
-          {initial}
-        </div>
-        <div className="flex-1 min-w-0 pr-8">
-          <div className="flex items-center gap-1.5">
-            <h3 className="font-feather font-black text-base text-duoGray-charcoal truncate">
-              {displayName}
-            </h3>
-            <ShieldCheck size={16} className="text-sparkBlue shrink-0" />
+      {/* Unified Profile Card with single clean Edit button */}
+      <div className="duo-card p-4 bg-white flex items-center justify-between gap-3 shadow-xs">
+        <div className="flex items-center gap-3.5 min-w-0">
+          <div className="w-14 h-14 rounded-2xl bg-eagerGreen border-b-4 border-eagerGreen-dark flex items-center justify-center text-white font-feather font-black text-xl shadow-xs shrink-0">
+            {initial}
           </div>
-          <p className="text-xs font-feather font-bold text-eagerGreen-dark truncate">
-            {displayUsername}
-          </p>
-          <p className="text-[11px] font-bold text-duoGray-pencil truncate mt-0.5">
-            {user.email}
-          </p>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <h3 className="font-feather font-black text-base text-duoGray-charcoal truncate">
+                {displayName}
+              </h3>
+              <ShieldCheck size={16} className="text-sparkBlue shrink-0" />
+            </div>
+
+            {/* School & Grade display inside profile card */}
+            <div className="flex items-center gap-1.5 text-xs font-bold text-duoGray-pencil truncate mt-0.5">
+              <School size={13} className="text-eagerGreen shrink-0" />
+              <span className="truncate">{schoolGradeText}</span>
+            </div>
+
+            <p className="text-[11px] font-bold text-duoGray-faded truncate mt-0.5">
+              {user.email}
+            </p>
+          </div>
         </div>
 
-        {/* Edit Profile Button */}
+        {/* The ONLY Edit Button */}
         <button
           onClick={handleOpenEdit}
           title="Upravit profil"
-          className="absolute top-4 right-4 p-2 rounded-xl border-2 border-duoGray-border hover:bg-gray-50 text-duoGray-charcoal active:scale-95 transition cursor-pointer"
+          className="p-2.5 rounded-xl border-2 border-duoGray-border hover:border-eagerGreen hover:bg-gray-50 text-duoGray-charcoal active:scale-95 transition cursor-pointer shrink-0"
         >
           <Pencil size={15} />
         </button>
-      </div>
-
-      {/* School & Grade Info Card */}
-      <div
-        onClick={handleOpenEdit}
-        className="duo-card p-3.5 bg-white flex items-center justify-between cursor-pointer hover:border-eagerGreen transition-colors group"
-      >
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-storybookGreen text-eagerGreen flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-            <School size={20} className="stroke-[2.5]" />
-          </div>
-          <div className="min-w-0">
-            <div className="text-[10px] font-feather font-black uppercase text-duoGray-pencil leading-tight">
-              Škola a ročník
-            </div>
-            {profile?.school || profile?.grade ? (
-              <div className="font-feather font-black text-xs text-duoGray-charcoal truncate mt-0.5">
-                {profile.school || 'Škola'}{profile.grade ? ` • ${profile.grade}` : ''}
-              </div>
-            ) : (
-              <div className="text-xs font-bold text-duoGray-pencil italic mt-0.5">
-                Klikni a doplň svou školu a ročník
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="p-1 text-duoGray-faded group-hover:text-eagerGreen transition-colors">
-          <Pencil size={14} />
-        </div>
       </div>
 
       {/* Stats Grid */}
@@ -245,10 +225,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 backdrop-blur-xs animate-in fade-in duration-100">
           <div className="w-full md:max-w-[402px] max-h-[90vh] bg-white rounded-t-[32px] md:rounded-3xl flex flex-col overflow-hidden shadow-2xl border-t-2 md:border-2 border-duoGray-border animate-in slide-in-from-bottom-6 duration-150 p-5">
             {/* Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
-              <h3 className="font-feather font-black text-[18px] text-duoGray-charcoal flex items-center gap-2">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-3">
+              <h3 className="font-feather font-black text-[17px] text-duoGray-charcoal flex items-center gap-2">
                 <GraduationCap size={20} className="text-eagerGreen" />
-                <span>Upravit profil studenta</span>
+                <span>Upravit profil</span>
               </h3>
               <button
                 onClick={() => {
@@ -261,14 +241,14 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               </button>
             </div>
 
-            <form onSubmit={handleSaveProfile} className="flex flex-col gap-3 overflow-y-auto">
+            <form onSubmit={handleSaveProfile} className="flex flex-col gap-3 overflow-y-auto pr-1">
               {errorMessage && (
                 <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-[#d93838] text-xs font-bold leading-tight animate-in fade-in">
                   {errorMessage}
                 </div>
               )}
 
-              {/* Username Field */}
+              {/* Nickname / Username Field */}
               <div>
                 <label className="block text-[11px] font-feather font-black uppercase text-duoGray-pencil mb-1">
                   Přezdívka (Nickname)
@@ -285,7 +265,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   />
                 </div>
                 <span className="text-[10px] text-duoGray-pencil mt-0.5 block font-bold">
-                  Písmena bez diakritiky a čísla.
+                  Tvá unikátní přezdívka ve Flexnote (bez diakritiky).
                 </span>
               </div>
 
@@ -309,7 +289,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               {/* School Field */}
               <div>
                 <label className="block text-[11px] font-feather font-black uppercase text-duoGray-pencil mb-1">
-                  Škola
+                  Škola (ZŠ, SŠ, Gymnázium)
                 </label>
                 <div className="relative flex items-center">
                   <School size={16} className="absolute left-3 text-duoGray-faded" />
@@ -317,43 +297,52 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     type="text"
                     value={school}
                     onChange={(e) => setSchool(e.target.value)}
-                    placeholder="např. Gymnázium Jana Nerudy"
+                    placeholder="např. ZŠ Campanus, Gymnázium Jana Nerudy..."
                     className="w-full pl-9 pr-3 py-2.5 rounded-xl border-2 border-duoGray-border focus:border-eagerGreen focus:outline-none text-xs font-bold text-duoGray-charcoal"
                   />
                 </div>
               </div>
 
-              {/* Grade Field with quick chips */}
+              {/* Grade Field with categorized chips for ZŠ, SŠ and Gymnázia */}
               <div>
                 <label className="block text-[11px] font-feather font-black uppercase text-duoGray-pencil mb-1">
-                  Ročník / Třída
+                  Třída / Ročník
                 </label>
                 <input
                   type="text"
                   value={grade}
                   onChange={(e) => setGrade(e.target.value)}
-                  placeholder="např. 3. ročník nebo Septima"
-                  className="w-full px-3 py-2 rounded-xl border-2 border-duoGray-border focus:border-eagerGreen focus:outline-none text-xs font-bold text-duoGray-charcoal mb-1.5"
+                  placeholder="Vyber níže nebo napiš (např. 8.A, 3. ročník, Kvarta)"
+                  className="w-full px-3 py-2 rounded-xl border-2 border-duoGray-border focus:border-eagerGreen focus:outline-none text-xs font-bold text-duoGray-charcoal mb-2"
                 />
 
-                {/* Quick grade selector chips */}
-                <div className="flex flex-wrap gap-1.5 mt-1">
-                  {COMMON_GRADES.map((g) => (
-                    <button
-                      key={g}
-                      type="button"
-                      onClick={() => {
-                        playPopSound();
-                        setGrade(g);
-                      }}
-                      className={`px-2 py-1 rounded-lg text-[10px] font-feather font-black transition cursor-pointer ${
-                        grade === g
-                          ? 'bg-eagerGreen text-white shadow-xs'
-                          : 'bg-gray-100 text-duoGray-pencil hover:text-duoGray-charcoal hover:bg-gray-200'
-                      }`}
-                    >
-                      {g}
-                    </button>
+                {/* Categories of chips */}
+                <div className="flex flex-col gap-2 bg-[#f9fafb] p-2.5 rounded-xl border border-duoGray-border">
+                  {GRADE_CATEGORIES.map((cat) => (
+                    <div key={cat.name}>
+                      <span className="text-[9.5px] font-feather font-black uppercase text-duoGray-pencil block mb-1">
+                        {cat.name}
+                      </span>
+                      <div className="flex flex-wrap gap-1">
+                        {cat.grades.map((g) => (
+                          <button
+                            key={g}
+                            type="button"
+                            onClick={() => {
+                              playPopSound();
+                              setGrade(g);
+                            }}
+                            className={`px-2 py-0.5 rounded-lg text-[10px] font-feather font-black transition cursor-pointer ${
+                              grade === g
+                                ? 'bg-eagerGreen text-white shadow-xs'
+                                : 'bg-white text-duoGray-pencil hover:text-duoGray-charcoal border border-duoGray-border hover:bg-gray-100'
+                            }`}
+                          >
+                            {g}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -362,7 +351,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <button
                 type="submit"
                 disabled={saving}
-                className="w-full duo-btn duo-btn-green py-3 px-4 text-xs font-feather font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer mt-2"
+                className="w-full duo-btn duo-btn-green py-3 px-4 text-xs font-feather font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer mt-1"
               >
                 {saving ? (
                   <Loader2 size={16} className="animate-spin" />
