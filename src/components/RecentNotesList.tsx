@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Clock, ChevronRight, BookOpen, Search, X, Download } from 'lucide-react';
+import { Clock, ChevronRight, BookOpen, Search, X, Download, Sparkles } from 'lucide-react';
 import { NoteItem, SubjectMeta } from '../types/notes';
 import { playPopSound } from '../utils/audio';
 import { SubjectIcon } from './SubjectIcon';
@@ -160,9 +160,17 @@ export const RecentNotesList: React.FC<RecentNotesListProps> = ({
                     <span>{meta.czechName}</span>
                   </span>
 
-                  <div className="flex items-center gap-1 text-[11px] font-bold text-duoGray-pencil">
-                    <Clock size={12} />
-                    <span>{note.date}</span>
+                  <div className="flex items-center gap-2 text-[11px] font-bold text-duoGray-pencil">
+                    {note.flashcards && note.flashcards.length > 0 && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-sparkBlue/10 text-sparkBlue text-[10px] font-feather font-black">
+                        <Sparkles size={11} />
+                        <span>{note.flashcards.length} kartiček</span>
+                      </span>
+                    )}
+                    <div className="flex items-center gap-1">
+                      <Clock size={12} />
+                      <span>{note.date}</span>
+                    </div>
                   </div>
                 </div>
 

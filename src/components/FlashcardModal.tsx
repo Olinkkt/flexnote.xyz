@@ -1,0 +1,427 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  X,
+  RotateCw,
+  ChevronLeft,
+  ChevronRight,
+  Sparkles,
+  CheckCircle2,
+  HelpCircle,
+  RotateCcw,
+  Trophy,
+  Loader2,
+  BookOpen
+} from 'lucide-react';
+import confetti from 'canvas-confetti';
+import { FlashcardItem, NoteItem, SubjectMeta } from '../types/notes';
+import { playPopSound, playSuccessChime } from '../utils/audio';
+import { MarkdownRenderer } from './MarkdownRenderer';
+import { SubjectIcon } from './SubjectIcon';
+import { generateFlashcardsForNote } from '../services/flashcards';
+
+interface FlashcardModalProps {
+  note: NoteItem;
+  subjects: SubjectMeta[];
+  onClose: () => void;
+  onUpdateFlashcards: (noteId: string, flashcards: FlashcardItem[]) => Promise<void> | void;
+}
+
+export const FlashcardModal: React.FC<FlashcardModalProps> = ({
+  note,
+  subjects,
+  onClose,
+  onUpdateFlashcards,
+}) => {
+  const [cards, setCards] = useState<FlashcardItem[]>(note.flashcards || []);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isFlipped, setIsFlipped] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [masteredIds, setMasteredIds] = useState<Set<string>>(new Set());
+
+  const subjectMeta = subjects.find(s => s.id === note.subject) || subjects[0];
+
+  // If no cards exist initially, generate them automatically on first open
+  useEffect(() => {
+    if (!note.flashcards || note.flashcards.length === 0) {
+      handleGenerateCards();
+    }
+  }, []);
+
+  const handleGenerateCards = async () => {
+    setIsGenerating(true);
+    playPopSound();
+    try {
+      const generated = await generateFlashcardsForNote(note);
+      if (generated && generated.length > 0) {
+        setCards(generated);
+        setCurrentIndex(0);
+        setIsFlipped(false);
+        setIsCompleted(false);
+        setMasteredIds(new Set());
+        await onUpdateFlashcards(note.id, generated);
+        playSuccessChime();
+      }
+    } catch (err) {
+      console.error('Failed to generate flashcards:', err);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleFlip = useCallback(() => {
+    playPopSound();
+    setIsFlipped(prev => !prev);
+  }, []);
+
+  const handleNext = useCallback(() => {
+    if (cards.length === 0) return;
+    playPopSound();
+    setIsFlipped(false);
+    if (currentIndex < cards.length - 1) {
+      setCurrentIndex(prev => prev + 1);
+    } else {
+      // Completed all cards!
+      setIsCompleted(true);
+      playSuccessChime();
+      try {
+        confetti({
+          particleCount: 90,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#58cc02', '#1cb0f6', '#ff9600', '#ff4b4b', '#ffd900'],
+        });
+      } catch {}
+    }
+  }, [cards.length, currentIndex]);
+
+  const handlePrev = useCallback(() => {
+    if (currentIndex > 0) {
+      playPopSound();
+      setIsFlipped(false);
+      setCurrentIndex(prev => prev - 1);
+    }
+  }, [currentIndex]);
+
+  const handleMarkMastered = () => {
+    if (cards.length === 0) return;
+    const currentCard = cards[currentIndex];
+    const newMastered = new Set(masteredIds);
+    newMastered.add(currentCard.id);
+    setMasteredIds(newMastered);
+    handleNext();
+  };
+
+  const handleMarkRepeat = () => {
+    if (cards.length === 0) return;
+    const currentCard = cards[currentIndex];
+    const newMastered = new Set(masteredIds);
+    newMastered.delete(currentCard.id);
+    setMasteredIds(newMastered);
+    handleNext();
+  };
+
+  const handleRestart = () => {
+    playPopSound();
+    setCurrentIndex(0);
+    setIsFlipped(false);
+    setIsCompleted(false);
+    setMasteredIds(new Set());
+  };
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isCompleted || isGenerating || cards.length === 0) return;
+      if (e.code === 'Space' || e.key === 'Enter') {
+        e.preventDefault();
+        handleFlip();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        handleNext();
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        handlePrev();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isCompleted, isGenerating, cards.length, handleFlip, handleNext, handlePrev]);
+
+  const currentCard = cards[currentIndex];
+  const progressPercent = cards.length > 0 ? ((currentIndex + 1) / cards.length) * 100 : 0;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+      <div className="w-full md:max-w-[440px] h-[92vh] max-h-[720px] bg-[#f7f7f7] rounded-t-[32px] md:rounded-3xl flex flex-col overflow-hidden shadow-2xl border-t-2 md:border-2 border-duoGray-border animate-in slide-in-from-bottom-6 duration-200">
+        {/* Drag handle for mobile */}
+        <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto my-2.5"></div>
+
+        {/* Modal Header */}
+        <div className="px-4 pb-2.5 bg-white border-b-2 border-duoGray-border flex items-center justify-between">
+          <div className="flex items-center gap-2 min-w-0">
+            <span
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-duo text-xs font-feather font-extrabold uppercase tracking-wide shrink-0"
+              style={{
+                backgroundColor: subjectMeta.bgTint,
+                color: subjectMeta.color,
+                border: `1.5px solid ${subjectMeta.borderColor}`,
+              }}
+            >
+              <SubjectIcon subject={subjectMeta.id} size={14} />
+              <span>{subjectMeta.czechName}</span>
+            </span>
+            <span className="font-feather font-black text-sm text-duoGray-charcoal truncate" title={note.title}>
+              {note.title}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleGenerateCards}
+              disabled={isGenerating}
+              title="Přegenerovat kartičky z AI"
+              className="p-2 rounded-duo border-2 border-duoGray-border hover:bg-sparkBlue-tint hover:border-sparkBlue text-duoGray-pencil hover:text-sparkBlue transition active:scale-95 cursor-pointer disabled:opacity-50"
+            >
+              {isGenerating ? <Loader2 size={16} className="animate-spin text-sparkBlue" /> : <Sparkles size={16} />}
+            </button>
+            <button
+              onClick={() => {
+                playPopSound();
+                onClose();
+              }}
+              className="p-2 rounded-duo border-2 border-duoGray-border hover:bg-gray-100 text-duoGray-charcoal transition active:scale-95 cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+
+        {/* Progress Bar Strip */}
+        <div className="px-4 py-2.5 bg-white border-b border-duoGray-border flex items-center gap-3">
+          <div className="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden border border-gray-300/60 p-0.5">
+            <div
+              className="bg-eagerGreen h-full rounded-full transition-all duration-300 shadow-xs"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+          <span className="text-xs font-feather font-black text-duoGray-pencil tracking-tight shrink-0">
+            {cards.length > 0 ? `${currentIndex + 1} / ${cards.length}` : '0 / 0'}
+          </span>
+        </div>
+
+        {/* Main Content Area */}
+        <div className="flex-1 p-4 flex flex-col justify-center items-center overflow-y-auto">
+          {isGenerating ? (
+            <div className="w-full max-w-[360px] bg-white border-2 border-duoGray-border border-b-4 rounded-3xl p-8 text-center shadow-md animate-pulse">
+              <div className="w-16 h-16 rounded-2xl bg-sparkBlue/15 border-2 border-sparkBlue/30 text-sparkBlue flex items-center justify-center mx-auto mb-4 animate-bounce">
+                <Sparkles size={32} />
+              </div>
+              <h3 className="font-feather font-black text-base text-duoGray-charcoal mb-1.5">
+                AI vytváří tvé kartičky...
+              </h3>
+              <p className="text-xs text-duoGray-pencil leading-relaxed">
+                Analyzuji zápisek, hledám KaTeX matematické vzorce a zvýrazněné pojmy.
+              </p>
+            </div>
+          ) : isCompleted ? (
+            /* Duolingo Victory Screen */
+            <div className="w-full max-w-[360px] bg-white border-2 border-duoGray-border border-b-[6px] border-b-eagerGreen rounded-3xl p-6 text-center shadow-lg animate-in zoom-in-95 duration-200">
+              <div className="w-20 h-20 rounded-full bg-storybookGreen/40 border-4 border-eagerGreen flex items-center justify-center mx-auto mb-4 text-eagerGreen shadow-md">
+                <Trophy size={40} className="stroke-[2.5]" />
+              </div>
+              <h2 className="font-feather font-black text-xl text-duoGray-charcoal mb-1">
+                Skvělá práce! 🎉
+              </h2>
+              <p className="text-xs font-bold text-duoGray-pencil mb-4">
+                Prošel(a) jsi všech {cards.length} kartiček z tématu „{note.title}“.
+              </p>
+
+              <div className="bg-gray-50 border-2 border-duoGray-border rounded-2xl p-3.5 mb-5 flex items-center justify-around">
+                <div className="text-center">
+                  <span className="block font-feather font-black text-lg text-eagerGreen">
+                    {masteredIds.size}
+                  </span>
+                  <span className="text-[10px] font-feather font-bold text-duoGray-pencil uppercase tracking-wider">
+                    Umím
+                  </span>
+                </div>
+                <div className="w-px h-8 bg-gray-200" />
+                <div className="text-center">
+                  <span className="block font-feather font-black text-lg text-[#ff9600]">
+                    {cards.length - masteredIds.size}
+                  </span>
+                  <span className="text-[10px] font-feather font-bold text-duoGray-pencil uppercase tracking-wider">
+                    K zopakování
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2.5">
+                <button
+                  onClick={handleRestart}
+                  className="w-full duo-btn duo-btn-green py-3 px-4 text-xs font-feather font-black uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <RotateCcw size={16} />
+                  <span>Procvičit znovu</span>
+                </button>
+                <button
+                  onClick={onClose}
+                  className="w-full duo-btn duo-btn-white py-2.5 px-4 text-xs font-feather font-black uppercase tracking-wider text-duoGray-charcoal cursor-pointer"
+                >
+                  Zpět k zápisku
+                </button>
+              </div>
+            </div>
+          ) : cards.length === 0 ? (
+            <div className="w-full max-w-[360px] bg-white border-2 border-duoGray-border border-b-4 rounded-3xl p-6 text-center shadow-md">
+              <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-3 text-duoGray-pencil">
+                <BookOpen size={28} />
+              </div>
+              <h3 className="font-feather font-black text-base text-duoGray-charcoal mb-1">
+                Žádné kartičky k dispozici
+              </h3>
+              <p className="text-xs text-duoGray-pencil mb-4">
+                Klikni níže pro automatické vygenerování kartiček z tohoto zápisku.
+              </p>
+              <button
+                onClick={handleGenerateCards}
+                className="w-full duo-btn duo-btn-green py-3 px-4 text-xs font-feather font-black uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Sparkles size={16} />
+                <span>Vygenerovat kartičky z AI</span>
+              </button>
+            </div>
+          ) : (
+            /* 3D Duolingo Flip Card */
+            <div className="w-full h-full max-h-[440px] perspective-1200 flex items-center justify-center">
+              <div
+                onClick={handleFlip}
+                className={`duo-flashcard-3d w-full h-full max-w-[380px] max-h-[420px] cursor-pointer select-none transition-transform duration-500 ${
+                  isFlipped ? 'rotate-y-180' : ''
+                }`}
+              >
+                {/* FRONT FACE (Otázka / Pojem) */}
+                <div className="duo-flashcard-face bg-white border-2 border-duoGray-border border-b-[6px] border-b-[#cfcfcf] p-6 flex flex-col justify-between shadow-md hover:border-sparkBlue/60 transition-colors">
+                  {/* Card Front Top Bar */}
+                  <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-gray-100 text-duoGray-charcoal text-[11px] font-feather font-black uppercase tracking-wider">
+                      <HelpCircle size={13} className="text-sparkBlue" />
+                      <span>{currentCard?.category === 'formula' ? 'Matematický vzorec' : 'Otázka / Pojem'}</span>
+                    </span>
+
+                    <span className="text-[11px] font-feather font-extrabold text-duoGray-faded flex items-center gap-1">
+                      <RotateCw size={12} />
+                      3D Karta
+                    </span>
+                  </div>
+
+                  {/* Card Front Center (Markdown & KaTeX) */}
+                  <div className="my-auto py-4 overflow-y-auto max-h-[260px] text-center flex flex-col items-center justify-center">
+                    <div className="w-full font-feather font-extrabold text-base md:text-lg text-duoGray-charcoal leading-snug">
+                      <MarkdownRenderer content={currentCard?.front || ''} />
+                    </div>
+                  </div>
+
+                  {/* Card Front Bottom Cue */}
+                  <div className="pt-3 border-t border-gray-100 flex items-center justify-center gap-1.5 text-xs font-feather font-extrabold text-sparkBlue">
+                    <RotateCw size={14} className="animate-spin-slow" />
+                    <span>Klepni pro otočení a odpověď</span>
+                  </div>
+                </div>
+
+                {/* BACK FACE (Odpověď & Vysvětlení) */}
+                <div className="duo-flashcard-face duo-flashcard-face-back bg-white border-2 border-sparkBlue/40 border-b-[6px] border-b-sparkBlue p-6 flex flex-col justify-between shadow-md">
+                  {/* Card Back Top Bar */}
+                  <div className="flex items-center justify-between pb-3 border-b border-blue-50">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-sparkBlue/10 text-sparkBlue text-[11px] font-feather font-black uppercase tracking-wider">
+                      <CheckCircle2 size={13} />
+                      <span>Odpověď & Řešení</span>
+                    </span>
+
+                    <span className="text-[11px] font-feather font-extrabold text-duoGray-faded flex items-center gap-1">
+                      <RotateCw size={12} />
+                      Rub
+                    </span>
+                  </div>
+
+                  {/* Card Back Center (Markdown & KaTeX) */}
+                  <div className="my-auto py-4 overflow-y-auto max-h-[260px] text-left w-full">
+                    <div className="w-full font-sans text-[14px] leading-relaxed text-duoGray-charcoal">
+                      <MarkdownRenderer content={currentCard?.back || ''} />
+                    </div>
+                  </div>
+
+                  {/* Card Back Bottom Cue */}
+                  <div className="pt-3 border-t border-blue-50 flex items-center justify-center gap-1.5 text-xs font-feather font-extrabold text-duoGray-pencil">
+                    <RotateCw size={14} />
+                    <span>Klepni pro otočení zpět</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer Navigation & Rating Actions */}
+        {!isCompleted && !isGenerating && cards.length > 0 && (
+          <div className="p-3.5 bg-white border-t-2 border-duoGray-border flex flex-col gap-2">
+            {/* Quick Actions: Repeat vs Mastered */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleMarkRepeat}
+                title="Zopakovat později"
+                className="flex-1 duo-btn duo-btn-white text-[#ff4b4b] border-2 border-[#ff4b4b]/30 border-b-4 border-b-[#ff4b4b]/50 hover:bg-red-50 py-2.5 px-3 text-xs font-feather font-black uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <RotateCcw size={14} />
+                <span>Znovu</span>
+              </button>
+
+              <button
+                onClick={handleFlip}
+                title="Otočit kartičku (Mezerník)"
+                className="duo-btn duo-btn-white py-2.5 px-3.5 text-xs font-feather font-black text-duoGray-charcoal border-2 border-duoGray-border cursor-pointer"
+              >
+                <RotateCw size={16} />
+              </button>
+
+              <button
+                onClick={handleMarkMastered}
+                title="Znám to! (Šipka vpravo)"
+                className="flex-1 duo-btn duo-btn-green py-2.5 px-3 text-xs font-feather font-black uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <CheckCircle2 size={15} />
+                <span>Umím to!</span>
+              </button>
+            </div>
+
+            {/* Stepper buttons (Previous / Next) */}
+            <div className="flex items-center justify-between text-duoGray-pencil pt-1 px-1">
+              <button
+                onClick={handlePrev}
+                disabled={currentIndex === 0}
+                className="inline-flex items-center gap-1 text-[11px] font-feather font-black uppercase tracking-wider disabled:opacity-30 hover:text-duoGray-charcoal cursor-pointer"
+              >
+                <ChevronLeft size={16} />
+                <span>Předchozí</span>
+              </button>
+
+              <span className="text-[11px] font-bold text-duoGray-faded">
+                Tip: Mezerník = otočit, šipky = listovat
+              </span>
+
+              <button
+                onClick={handleNext}
+                className="inline-flex items-center gap-1 text-[11px] font-feather font-black uppercase tracking-wider hover:text-duoGray-charcoal cursor-pointer"
+              >
+                <span>{currentIndex < cards.length - 1 ? 'Další' : 'Dokončit'}</span>
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};

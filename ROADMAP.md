@@ -58,7 +58,7 @@ Cíl: Zaručit, že každý student má okamžitý a plný přístup ke všem sv
 ## 📚 Verze 3: Aktivní studium & Testování (Flashcards & Practice)
 Cíl: Umožnit studentům efektivně se učit přímo z jejich zdigitalizovaných zápisků.
 
-1. **Chytré kartičky (Flashcards)**:
+1. **Chytré kartičky (Flashcards) (Hotovo ✅)**:
    - Automatické generování flashcards jedním kliknutím z libovolného `.md` zápisku pomocí AI.
    - Oboustranné kartičky s 3D flip efektem ve stylu Duolingo.
    - Podpora matematických vzorců a zvýrazněných pojmů na kartičkách.

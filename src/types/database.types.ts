@@ -15,6 +15,7 @@ export type Database = {
       notes: {
         Row: {
           created_at: string | null
+          flashcards: Json | null
           id: string
           markdown: string
           reading_time: string | null
@@ -28,6 +29,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          flashcards?: Json | null
           id?: string
           markdown: string
           reading_time?: string | null
@@ -41,6 +43,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          flashcards?: Json | null
           id?: string
           markdown?: string
           reading_time?: string | null

@@ -6,6 +6,7 @@ import { SubjectIcon } from './SubjectIcon';
 import { Toast, ToastProps } from './Toast';
 import { fileToBase64, extractNoteFromImage } from '../services/openrouter';
 import { uploadNoteImage } from '../services/supabase';
+import { generateOfflineFlashcards } from '../services/flashcards';
 
 interface ScanModalProps {
   onClose: () => void;
@@ -170,6 +171,9 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote, userI
       tags: [selectedSubject, 'Zápisky', 'Nový'],
       markdown: extractedData?.markdown || `# Zápisky z hodiny\n\n- Digitalizovaný text ze sešitu.\n- Předmět: **${AVAILABLE_CLASSES.find(c => c.id === selectedSubject)?.name || selectedSubject}**`,
     };
+
+    // Automatically generate initial flashcards from formulas and concepts
+    newNote.flashcards = generateOfflineFlashcards(newNote);
 
     onSaveNote(newNote);
     onClose();

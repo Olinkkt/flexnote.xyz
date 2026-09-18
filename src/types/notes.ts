@@ -13,6 +13,14 @@ export interface SubjectMeta {
   description: string;
 }
 
+export interface FlashcardItem {
+  id: string;
+  front: string;
+  back: string;
+  category?: 'formula' | 'concept' | 'fact' | 'general';
+  hint?: string;
+}
+
 export interface NoteItem {
   id: string;
   title: string;
@@ -27,6 +35,7 @@ export interface NoteItem {
   status: 'mastered' | 'learning' | 'new';
   summary: string;
   keyFormulas?: string[];
+  flashcards?: FlashcardItem[];
 }
 
 export interface LearningNode {

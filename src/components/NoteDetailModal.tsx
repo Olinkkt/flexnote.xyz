@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { X, Copy, Check, BookOpen, Code2, Trash2, Pencil, Save, RotateCcw } from 'lucide-react';
+import { X, Copy, Check, BookOpen, Code2, Trash2, Pencil, Save, RotateCcw, Sparkles } from 'lucide-react';
 import { NoteItem, SubjectMeta } from '../types/notes';
 import { playPopSound, playSuccessChime } from '../utils/audio';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { SubjectIcon } from './SubjectIcon';
+import { FlashcardModal } from './FlashcardModal';
 
 interface NoteDetailModalProps {
   note: NoteItem;
@@ -26,6 +27,7 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
   const [editTitle, setEditTitle] = useState(note.title);
   const [editMarkdown, setEditMarkdown] = useState(note.markdown);
   const [isSaving, setIsSaving] = useState(false);
+  const [showFlashcards, setShowFlashcards] = useState(false);
 
   const subjectMeta = subjects.find(s => s.id === note.subject) || subjects[0];
 
@@ -82,6 +84,20 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => {
+                playPopSound();
+                setShowFlashcards(true);
+              }}
+              title="Procvičit kartičky s 3D flip efektem"
+              className="px-2.5 py-1.5 rounded-duo border-2 border-duoGray-border hover:bg-sparkBlue-tint hover:border-sparkBlue text-duoGray-charcoal hover:text-sparkBlue transition active:scale-95 cursor-pointer flex items-center gap-1.5 shadow-xs"
+            >
+              <Sparkles size={15} className="text-sparkBlue shrink-0" />
+              <span className="text-xs font-feather font-black text-sparkBlue">
+                {note.flashcards && note.flashcards.length > 0 ? `${note.flashcards.length}` : 'Kartičky'}
+              </span>
+            </button>
+
             {onUpdateNote && (
               <button
                 onClick={() => {
@@ -207,13 +223,59 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
             </div>
           ) : activeTab === 'preview' ? (
             <div className="text-duoGray-charcoal">
-              <div className="bg-storybookGreen/30 rounded-2xl p-3 border-2 border-eagerGreen/40 mb-4">
+              <div className="bg-storybookGreen/30 rounded-2xl p-3 border-2 border-eagerGreen/40 mb-3">
                 <div className="text-[11px] font-feather font-black uppercase text-eagerGreen-dark mb-1">
                   Shrnutí zápisku:
                 </div>
                 <div className="text-xs text-duoGray-charcoal font-medium leading-normal">
                   <MarkdownRenderer content={note.summary} />
                 </div>
+              </div>
+
+              {/* Duolingo 3D Flashcards Banner */}
+              <div
+                onClick={() => {
+                  playPopSound();
+                  setShowFlashcards(true);
+                }}
+                className="duo-card duo-card-interactive p-3.5 mb-4 bg-gradient-to-r from-blue-50/70 via-green-50/50 to-white border-2 border-sparkBlue/35 hover:border-sparkBlue cursor-pointer flex items-center justify-between group transition-all"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-2xl bg-sparkBlue text-white flex items-center justify-center border-b-2 border-sparkBlue-dark shadow-xs group-hover:scale-105 transition-transform shrink-0">
+                    <Sparkles size={20} />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-feather font-black text-xs text-duoGray-charcoal flex items-center gap-1.5 truncate">
+                      <span>Chytré kartičky (Flashcards)</span>
+                      {note.flashcards && note.flashcards.length > 0 && (
+                        <span className="px-1.5 py-0.5 rounded-full bg-sparkBlue/15 text-sparkBlue text-[10px] font-extrabold shrink-0">
+                          {note.flashcards.length} ks
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] font-bold text-duoGray-pencil mt-0.5 truncate">
+                      {note.flashcards && note.flashcards.length > 0
+                        ? 'Procvičuj s 3D flip efektem a vzorci'
+                        : 'Generování jedním kliknutím pomocí AI'}
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    playPopSound();
+                    setShowFlashcards(true);
+                  }}
+                  className={`duo-btn text-[11px] font-black uppercase tracking-wider py-1.5 px-3 shrink-0 ml-2 ${
+                    note.flashcards && note.flashcards.length > 0
+                      ? 'duo-btn-blue'
+                      : 'duo-btn-green'
+                  }`}
+                >
+                  {note.flashcards && note.flashcards.length > 0 ? 'Procvičit' : 'Vytvořit'}
+                </button>
               </div>
 
               {/* Formatted Markdown with KaTeX math formula rendering */}
@@ -271,6 +333,20 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
           </div>
         )}
       </div>
+
+      {/* 3D Duolingo Flashcard Modal */}
+      {showFlashcards && (
+        <FlashcardModal
+          note={note}
+          subjects={subjects}
+          onClose={() => setShowFlashcards(false)}
+          onUpdateFlashcards={async (noteId, flashcards) => {
+            if (onUpdateNote) {
+              await onUpdateNote(noteId, { flashcards });
+            }
+          }}
+        />
+      )}
     </div>
   );
 };
