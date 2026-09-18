@@ -19,7 +19,7 @@ export const ComboBadge: React.FC<ComboBadgeProps> = ({ combo }) => {
         <Flame size={15} className="fill-orange-200 text-white" />
       )}
       <span>
-        {combo} v řadě! {isHigh ? '🔥 NEZASTAVITELNÝ!' : isMedium ? '⚡ SKVĚLE!' : '🔥'}
+        {combo} v řadě! {isHigh ? 'NEZASTAVITELNÝ!' : isMedium ? 'SKVĚLE!' : ''}
       </span>
     </div>
   );
@@ -42,7 +42,7 @@ export const DiamondEarnedToast: React.FC<DiamondEarnedToastProps> = ({
       </div>
       <div>
         <div className="text-sm font-feather font-black text-sparkBlue flex items-center gap-1">
-          +{amount} Drahokamů 💎
+          +{amount} Drahokamů
         </div>
         <div className="text-[11px] font-bold text-duoGray-pencil">{message}</div>
       </div>

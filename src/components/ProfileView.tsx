@@ -380,7 +380,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           <div className="mt-3 pt-3 border-t border-gray-100 space-y-2 text-xs text-duoGray-charcoal font-medium animate-in fade-in">
             <div className="p-2.5 rounded-xl bg-gray-50 border border-duoGray-border">
               <div className="font-feather font-black text-[11px] text-duoGray-charcoal uppercase tracking-wider mb-1">
-                🍏 iPhone & iPad (Safari)
+                iPhone & iPad (Safari)
               </div>
               <p className="text-[11px] text-duoGray-pencil leading-relaxed">
                 V dolní liště Safari klepni na tlačítko <strong>Sdílet</strong> (čtvereček se šipkou nahoru) a vyber <strong>„Přidat na plochu“</strong>.
@@ -388,7 +388,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </div>
             <div className="p-2.5 rounded-xl bg-gray-50 border border-duoGray-border">
               <div className="font-feather font-black text-[11px] text-duoGray-charcoal uppercase tracking-wider mb-1">
-                🤖 Android (Chrome)
+                Android (Chrome)
               </div>
               <p className="text-[11px] text-duoGray-pencil leading-relaxed">
                 V menu vpravo nahoře (tři tečky) zvol <strong>„Instalovat aplikaci“</strong> nebo <strong>„Přidat na plochu“</strong>.

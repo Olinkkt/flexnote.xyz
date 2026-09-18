@@ -54,7 +54,7 @@ export const StreakRescueModal: React.FC<StreakRescueModalProps> = ({
             </div>
 
             <h3 className="font-feather font-black text-2xl text-duoGray-charcoal mb-1">
-              Série zachráněna! 🛡️
+              Série zachráněna!
             </h3>
 
             <p className="text-xs font-bold text-duoGray-pencil leading-relaxed mb-4">
@@ -62,14 +62,18 @@ export const StreakRescueModal: React.FC<StreakRescueModalProps> = ({
             </p>
 
             <div className="p-3.5 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-2xl mb-4 flex items-center justify-center gap-2">
-              <Flame size={22} className="text-orange-500 fill-orange-400 animate-bounce" />
+              <Flame size={22} className="text-orange-500 fill-orange-400" />
               <span className="font-feather font-black text-base text-orange-600">
                 Série {streakDays} {streakDays === 1 ? 'den' : streakDays < 5 ? 'dny' : 'dní'} pokračuje!
               </span>
             </div>
 
-            <div className="text-[11px] font-bold text-duoGray-pencil mb-5">
-              Zbývající záchrany série: <span className="text-sparkBlue font-black">{remainingFreezes} 🛡️</span>
+            <div className="text-[11px] font-bold text-duoGray-pencil mb-5 flex items-center justify-center gap-1.5">
+              <span>Zbývající záchrany série:</span>
+              <span className="inline-flex items-center gap-1 text-sparkBlue font-black">
+                <Shield size={13} className="fill-sparkBlue" />
+                <span>{remainingFreezes}</span>
+              </span>
             </div>
 
             <button
@@ -79,7 +83,7 @@ export const StreakRescueModal: React.FC<StreakRescueModalProps> = ({
               }}
               className="w-full duo-btn duo-btn-green text-xs font-feather font-black uppercase tracking-wider py-3 cursor-pointer"
             >
-              Pokračovat v učení 🚀
+              Pokračovat v učení
             </button>
           </>
         ) : (
@@ -90,7 +94,7 @@ export const StreakRescueModal: React.FC<StreakRescueModalProps> = ({
             </div>
 
             <h3 className="font-feather font-black text-2xl text-duoGray-charcoal mb-1">
-              Tvoje série vyhasla! ❄️
+              Tvoje série vyhasla!
             </h3>
 
             <p className="text-xs font-bold text-duoGray-pencil leading-relaxed mb-4">
@@ -103,11 +107,11 @@ export const StreakRescueModal: React.FC<StreakRescueModalProps> = ({
                 <div className="flex items-center gap-2 mb-1.5">
                   <Sparkles size={16} className="text-sparkBlue fill-sparkBlue shrink-0" />
                   <span className="font-feather font-black text-xs text-duoGray-charcoal">
-                    Obnovit sérii za 50 💎
+                    Obnovit sérii za 50 drahokamů
                   </span>
                 </div>
                 <p className="text-[10.5px] font-bold text-duoGray-pencil mb-2.5">
-                  Máš {userDiamonds} 💎. Můžeš použít 50 drahokamů a vrátit sérii {streakDays} dní zpět.
+                  Máš {userDiamonds} drahokamů. Můžeš použít 50 drahokamů a vrátit sérii {streakDays} dní zpět.
                 </p>
                 <button
                   onClick={handleRestore}
@@ -115,12 +119,12 @@ export const StreakRescueModal: React.FC<StreakRescueModalProps> = ({
                   className="w-full duo-btn duo-btn-blue text-xs font-feather font-black uppercase tracking-wider py-2.5 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                 >
                   <Shield size={14} />
-                  <span>{restoring ? 'Obnovuji...' : 'Obnovit sérii (50 💎)'}</span>
+                  <span>{restoring ? 'Obnovuji...' : 'Obnovit sérii (50 drahokamů)'}</span>
                 </button>
               </div>
             ) : (
               <div className="p-3 bg-gray-50 border-2 border-duoGray-border rounded-2xl mb-4 text-xs font-bold text-duoGray-pencil">
-                Pro obnovení je potřeba 50 💎 (máš {userDiamonds} 💎).
+                Pro obnovení je potřeba 50 drahokamů (máš {userDiamonds} drahokamů).
               </div>
             )}
 

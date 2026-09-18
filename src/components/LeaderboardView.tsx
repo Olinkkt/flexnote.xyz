@@ -8,6 +8,8 @@ import {
   Share2,
   Check,
   Crown,
+  Medal,
+  Award,
 } from 'lucide-react';
 import {
   LeaderboardEntry,
@@ -120,29 +122,44 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
     return entries.filter((e) => e.rank > 3);
   }, [entries]);
 
-  // Format value based on metric
+  // Format value based on metric with clean icons
   const formatMetricValue = (entry: LeaderboardEntry) => {
     if (metric === 'study_time') {
       const sec = timeframe === 'weekly' ? entry.weeklyStudySeconds : entry.studyTimeSeconds;
-      return formatStudyDuration(sec);
+      return (
+        <span className="inline-flex items-center gap-1">
+          <Clock size={12} className="text-duoGray-pencil shrink-0" />
+          <span>{formatStudyDuration(sec)}</span>
+        </span>
+      );
     }
     if (metric === 'diamonds') {
       const dia = timeframe === 'weekly' ? entry.weeklyDiamonds : entry.diamonds;
-      return `${dia} 💎`;
+      return (
+        <span className="inline-flex items-center gap-1">
+          <Sparkles size={12} className="text-sparkBlue fill-sparkBlue shrink-0" />
+          <span>{dia}</span>
+        </span>
+      );
     }
-    return `${entry.streakDays} dní 🔥`;
+    return (
+      <span className="inline-flex items-center gap-1">
+        <Flame size={12} className="text-orange-500 fill-orange-500 shrink-0" />
+        <span>{entry.streakDays} dní</span>
+      </span>
+    );
   };
 
   // Generate Flex status text
   const generateFlexText = () => {
     const rankText = currentUserEntry ? `${currentUserEntry.rank}. místo` : 'v TOP lize';
     const weeklyTime = formatStudyDuration(gamification.weeklyStudySeconds);
-    return `🔥 Moje statistiky na Flexnote (flexnote.xyz):
-⚡ Série: ${gamification.streakDays} dní v řadě
-⏱️ Čas studia tento týden: ${weeklyTime}
-💎 Získáno: ${gamification.weeklyDiamonds} drahokamů
-🏆 Žebříček: ${rankText} v lize!
-Trumfneš mě? 🚀`;
+    return `Moje statistiky na Flexnote (flexnote.xyz):
+• Série: ${gamification.streakDays} dní v řadě
+• Čas studia tento týden: ${weeklyTime}
+• Získáno drahokamů: ${gamification.weeklyDiamonds}
+• Žebříček: ${rankText}
+Trumfneš mě?`;
   };
 
   const handleCopyFlex = () => {
@@ -161,9 +178,20 @@ Trumfneš mě? 🚀`;
           <h2 className="font-feather font-black text-2xl text-duoGray-charcoal tracking-tight">
             Žebříček
           </h2>
-          <p className="text-xs font-bold text-duoGray-pencil mt-0.5">
-            {timeframe === 'weekly' ? '⚡ Tento týden' : '👑 Celková síň slávy'}
-            {currentUserEntry ? ` • Jsi na ${currentUserEntry.rank}. místě` : ` • ${entries.length} studentů`}
+          <p className="text-xs font-bold text-duoGray-pencil mt-0.5 flex items-center gap-1.5">
+            {timeframe === 'weekly' ? (
+              <span className="inline-flex items-center gap-1">
+                <Clock size={12} className="text-eagerGreen-dark" />
+                <span>Tento týden</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1">
+                <Trophy size={12} className="text-amber-500" />
+                <span>Celková síň slávy</span>
+              </span>
+            )}
+            <span>•</span>
+            <span>{currentUserEntry ? `Jsi na ${currentUserEntry.rank}. místě` : `${entries.length} studentů`}</span>
           </p>
         </div>
 
@@ -176,7 +204,7 @@ Trumfneš mě? 🚀`;
           className="duo-btn duo-btn-white px-3.5 py-2 text-xs font-feather font-black text-orange-600 border-2 border-orange-200 border-b-[4px] border-b-orange-400 hover:bg-orange-50 flex items-center gap-1.5 shadow-xs transition"
         >
           <Share2 size={13} className="stroke-[2.5]" />
-          <span>Flexit 🚀</span>
+          <span>Flexit</span>
         </button>
       </div>
 
@@ -296,7 +324,7 @@ Trumfneš mě? 🚀`;
             {entries[1] ? (
               <div className="w-full flex flex-col items-center animate-in slide-in-from-bottom-2 duration-200">
                 <div className="w-12 h-12 rounded-full bg-slate-100 border-2 border-slate-300 flex items-center justify-center font-feather font-black text-sm text-slate-700 shadow-2xs relative mb-1.5">
-                  <span className="text-base">🥈</span>
+                  <Medal size={22} className="text-slate-500 fill-slate-300" />
                   {entries[1].isCurrentUser && (
                     <span className="absolute -top-1 -right-1 bg-eagerGreen text-white text-[9px] px-1 rounded-full font-black border-b-2 border-eagerGreen-dark shadow-xs">
                       TY
@@ -313,7 +341,7 @@ Trumfneš mě? 🚀`;
             ) : (
               <div className="w-full flex flex-col items-center opacity-60">
                 <div className="w-12 h-12 rounded-full bg-slate-50 border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400 text-xs font-bold mb-1.5">
-                  <span className="text-base grayscale opacity-60">🥈</span>
+                  <Medal size={22} className="text-slate-400 fill-slate-200 opacity-60" />
                 </div>
                 <div className="text-xs font-feather font-bold text-duoGray-faded text-center">
                   Volno
@@ -338,7 +366,7 @@ Trumfneš mě? 🚀`;
                     <Crown size={20} className="text-amber-500 fill-amber-400 drop-shadow-2xs" />
                   </div>
                   <div className="w-14 h-14 rounded-full bg-amber-50 border-2 border-amber-400 flex items-center justify-center font-feather font-black text-lg text-amber-800 shadow-xs">
-                    <span className="text-xl">🥇</span>
+                    <Trophy size={22} className="text-amber-500 fill-amber-300" />
                     {entries[0].isCurrentUser && (
                       <span className="absolute -top-1 -right-1 bg-eagerGreen text-white text-[9px] px-1.5 rounded-full font-black border-b-2 border-eagerGreen-dark shadow-xs">
                         TY
@@ -360,7 +388,7 @@ Trumfneš mě? 🚀`;
                     <Crown size={20} className="text-amber-400 fill-amber-300 opacity-60" />
                   </div>
                   <div className="w-14 h-14 rounded-full bg-amber-50/50 border-2 border-dashed border-amber-300 flex items-center justify-center text-amber-500 shadow-xs">
-                    <span className="text-xl grayscale opacity-60">🥇</span>
+                    <Trophy size={22} className="text-amber-400 fill-amber-200 opacity-60" />
                   </div>
                 </div>
                 <div className="text-xs font-feather font-bold text-duoGray-faded text-center">
@@ -382,7 +410,7 @@ Trumfneš mě? 🚀`;
             {entries[2] ? (
               <div className="w-full flex flex-col items-center animate-in slide-in-from-bottom-1 duration-200">
                 <div className="w-12 h-12 rounded-full bg-orange-50 border-2 border-orange-300 flex items-center justify-center font-feather font-black text-sm text-orange-900 shadow-2xs relative mb-1.5">
-                  <span className="text-base">🥉</span>
+                  <Award size={22} className="text-amber-700 fill-amber-300" />
                   {entries[2].isCurrentUser && (
                     <span className="absolute -top-1 -right-1 bg-eagerGreen text-white text-[9px] px-1 rounded-full font-black border-b-2 border-eagerGreen-dark shadow-xs">
                       TY
@@ -399,7 +427,7 @@ Trumfneš mě? 🚀`;
             ) : (
               <div className="w-full flex flex-col items-center opacity-60">
                 <div className="w-12 h-12 rounded-full bg-orange-50/40 border-2 border-dashed border-orange-300 flex items-center justify-center text-orange-500 text-xs font-bold mb-1.5">
-                  <span className="text-base grayscale opacity-60">🥉</span>
+                  <Award size={22} className="text-amber-600/60 fill-amber-200 opacity-60" />
                 </div>
                 <div className="text-xs font-feather font-bold text-duoGray-faded text-center">
                   Volno
@@ -426,8 +454,8 @@ Trumfneš mě? 🚀`;
         ) : listEntries.length === 0 ? (
           <div className="py-8 text-center text-xs font-bold text-duoGray-pencil bg-white rounded-3xl border-2 border-duoGray-border border-b-[4px] shadow-2xs">
             {entries.length === 0
-              ? 'Zatím v této kategorii nikdo nesoutěží. Buď první na pódiu! 🚀'
-              : 'Všichni soutěžící jsou na pódiu výše. Buď další! 🚀'}
+              ? 'Zatím v této kategorii nikdo nesoutěží. Buď první na pódiu!'
+              : 'Všichni soutěžící jsou na pódiu výše. Buď další!'}
           </div>
         ) : (
           <div className="bg-white rounded-3xl border-2 border-duoGray-border border-b-[5px] divide-y-2 divide-gray-100 overflow-hidden shadow-xs">
@@ -524,7 +552,7 @@ Trumfneš mě? 🚀`;
             </div>
 
             <h3 className="font-feather font-black text-xl text-duoGray-charcoal">
-              Flexit výsledky 🚀
+              Flexit výsledky
             </h3>
             <p className="text-xs font-bold text-duoGray-pencil mt-1 mb-4">
               Pochlub se svým časem studia, sérií a nasbíranými drahokamy před spolužáky na Discordu nebo sítích!
