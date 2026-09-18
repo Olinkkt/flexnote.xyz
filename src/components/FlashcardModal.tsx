@@ -2,8 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   X,
   RotateCw,
-  ChevronLeft,
-  ChevronRight,
   Sparkles,
   CheckCircle2,
   HelpCircle,
@@ -138,16 +136,16 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
         handleFlip();
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
-        handleNext();
+        handleMarkMastered();
       } else if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        handlePrev();
+        handleMarkRepeat();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isCompleted, isGenerating, cards.length, handleFlip, handleNext, handlePrev]);
+  }, [isCompleted, isGenerating, cards.length, handleFlip, handleMarkMastered, handleMarkRepeat]);
 
   const currentCard = cards[currentIndex];
   const progressPercent = cards.length > 0 ? ((currentIndex + 1) / cards.length) * 100 : 0;
@@ -178,14 +176,6 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
           </div>
 
           <div className="flex items-center gap-1">
-            <button
-              onClick={handleGenerateCards}
-              disabled={isGenerating}
-              title="Přegenerovat kartičky z AI"
-              className="p-2 rounded-duo border-2 border-duoGray-border hover:bg-sparkBlue-tint hover:border-sparkBlue text-duoGray-pencil hover:text-sparkBlue transition active:scale-95 cursor-pointer disabled:opacity-50"
-            >
-              {isGenerating ? <Loader2 size={16} className="animate-spin text-sparkBlue" /> : <Sparkles size={16} />}
-            </button>
             <button
               onClick={() => {
                 playPopSound();
@@ -249,11 +239,11 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
                 </div>
                 <div className="w-px h-8 bg-gray-200" />
                 <div className="text-center">
-                  <span className="block font-feather font-black text-lg text-[#ff9600]">
+                  <span className="block font-feather font-black text-lg text-[#ff4b4b]">
                     {cards.length - masteredIds.size}
                   </span>
                   <span className="text-[10px] font-feather font-bold text-duoGray-pencil uppercase tracking-wider">
-                    K zopakování
+                    Neumím
                   </span>
                 </div>
               </div>
@@ -364,59 +354,34 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
           )}
         </div>
 
-        {/* Footer Navigation & Rating Actions */}
+        {/* Footer Rating & Flip Actions */}
         {!isCompleted && !isGenerating && cards.length > 0 && (
-          <div className="p-3.5 bg-white border-t-2 border-duoGray-border flex flex-col gap-2">
-            {/* Quick Actions: Repeat vs Mastered */}
-            <div className="flex items-center gap-2">
+          <div className="p-3.5 pb-5 bg-white border-t-2 border-duoGray-border">
+            <div className="flex items-center gap-2.5">
               <button
                 onClick={handleMarkRepeat}
-                title="Zopakovat později"
-                className="flex-1 duo-btn duo-btn-white text-[#ff4b4b] border-2 border-[#ff4b4b]/30 border-b-4 border-b-[#ff4b4b]/50 hover:bg-red-50 py-2.5 px-3 text-xs font-feather font-black uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer"
+                title="Neumím to!"
+                className="flex-1 duo-btn duo-btn-red py-3 px-3 text-xs font-feather font-black uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
               >
-                <RotateCcw size={14} />
-                <span>Znovu</span>
+                <X size={16} className="stroke-[3]" />
+                <span>Neumím to!</span>
               </button>
 
               <button
                 onClick={handleFlip}
                 title="Otočit kartičku (Mezerník)"
-                className="duo-btn duo-btn-white py-2.5 px-3.5 text-xs font-feather font-black text-duoGray-charcoal border-2 border-duoGray-border cursor-pointer"
+                className="duo-btn duo-btn-white py-3 px-3.5 text-xs font-feather font-black text-duoGray-charcoal border-2 border-duoGray-border cursor-pointer shadow-xs"
               >
-                <RotateCw size={16} />
+                <RotateCw size={17} />
               </button>
 
               <button
                 onClick={handleMarkMastered}
-                title="Znám to! (Šipka vpravo)"
-                className="flex-1 duo-btn duo-btn-green py-2.5 px-3 text-xs font-feather font-black uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer"
+                title="Umím to!"
+                className="flex-1 duo-btn duo-btn-green py-3 px-3 text-xs font-feather font-black uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
               >
-                <CheckCircle2 size={15} />
+                <CheckCircle2 size={16} className="stroke-[2.5]" />
                 <span>Umím to!</span>
-              </button>
-            </div>
-
-            {/* Stepper buttons (Previous / Next) */}
-            <div className="flex items-center justify-between text-duoGray-pencil pt-1 px-1">
-              <button
-                onClick={handlePrev}
-                disabled={currentIndex === 0}
-                className="inline-flex items-center gap-1 text-[11px] font-feather font-black uppercase tracking-wider disabled:opacity-30 hover:text-duoGray-charcoal cursor-pointer"
-              >
-                <ChevronLeft size={16} />
-                <span>Předchozí</span>
-              </button>
-
-              <span className="text-[11px] font-bold text-duoGray-faded">
-                Tip: Mezerník = otočit, šipky = listovat
-              </span>
-
-              <button
-                onClick={handleNext}
-                className="inline-flex items-center gap-1 text-[11px] font-feather font-black uppercase tracking-wider hover:text-duoGray-charcoal cursor-pointer"
-              >
-                <span>{currentIndex < cards.length - 1 ? 'Další' : 'Dokončit'}</span>
-                <ChevronRight size={16} />
               </button>
             </div>
           </div>

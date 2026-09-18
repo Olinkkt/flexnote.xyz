@@ -92,6 +92,18 @@ h1, h2, h3, .font-feather {
   border-bottom-width: 1px;
 }
 
+.duo-btn-red {
+  background-color: #ff4b4b;
+  color: #ffffff;
+  border-bottom: 4px solid #ea2b2b;
+}
+.duo-btn-red:hover {
+  background-color: #ff5c5c;
+}
+.duo-btn-red:active {
+  border-bottom-width: 1px;
+}
+
 .duo-btn-white {
   background-color: #ffffff;
   color: #4b4b4b;
