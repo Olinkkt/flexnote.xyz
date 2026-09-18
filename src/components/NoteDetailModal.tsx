@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { X, Copy, Check, BookOpen, Code2, Trash2 } from 'lucide-react';
+import { X, Copy, Check, BookOpen, Code2, Trash2, Pencil, Save, RotateCcw } from 'lucide-react';
 import { NoteItem, SubjectMeta } from '../types/notes';
-import { playPopSound } from '../utils/audio';
+import { playPopSound, playSuccessChime } from '../utils/audio';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { SubjectIcon } from './SubjectIcon';
 
@@ -10,6 +10,7 @@ interface NoteDetailModalProps {
   subjects: SubjectMeta[];
   onClose: () => void;
   onDeleteNote?: (noteId: string) => void;
+  onUpdateNote?: (noteId: string, updates: Partial<NoteItem>) => Promise<void> | void;
 }
 
 export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
@@ -17,17 +18,42 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
   subjects,
   onClose,
   onDeleteNote,
+  onUpdateNote,
 }) => {
   const [activeTab, setActiveTab] = useState<'preview' | 'raw'>('preview');
   const [copied, setCopied] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(note.title);
+  const [editMarkdown, setEditMarkdown] = useState(note.markdown);
+  const [isSaving, setIsSaving] = useState(false);
 
   const subjectMeta = subjects.find(s => s.id === note.subject) || subjects[0];
 
   const handleCopy = () => {
     playPopSound();
-    navigator.clipboard.writeText(note.markdown);
+    navigator.clipboard.writeText(isEditing ? editMarkdown : note.markdown);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editTitle.trim()) return;
+    setIsSaving(true);
+    playPopSound();
+    try {
+      if (onUpdateNote) {
+        await onUpdateNote(note.id, {
+          title: editTitle.trim(),
+          markdown: editMarkdown,
+        });
+      }
+      playSuccessChime();
+      setIsEditing(false);
+    } catch (err) {
+      console.error('Failed to save note changes:', err);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -56,6 +82,22 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5">
+            {onUpdateNote && (
+              <button
+                onClick={() => {
+                  playPopSound();
+                  setIsEditing(!isEditing);
+                }}
+                title={isEditing ? 'Ukončit úpravy' : 'Upravit zápisek'}
+                className={`p-2 rounded-duo border-2 border-duoGray-border transition active:scale-95 cursor-pointer ${
+                  isEditing
+                    ? 'bg-sparkBlue text-white border-sparkBlue shadow-xs'
+                    : 'hover:bg-gray-100 text-duoGray-charcoal'
+                }`}
+              >
+                <Pencil size={16} />
+              </button>
+            )}
             {onDeleteNote && (
               <button
                 onClick={() => {
@@ -83,47 +125,87 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
           </div>
         </div>
 
-        {/* Tab switcher: Formatted vs Raw */}
-        <div className="px-4 pt-2.5 pb-2 bg-gray-50 flex items-center justify-between border-b border-gray-200">
-          <div className="flex gap-2">
-            <button
-              onClick={() => {
-                playPopSound();
-                setActiveTab('preview');
-              }}
-              className={`px-3 py-1 rounded-duo text-xs font-feather font-extrabold flex items-center gap-1.5 transition ${
-                activeTab === 'preview'
-                  ? 'bg-white text-eagerGreen shadow-xs border-2 border-duoGray-border'
-                  : 'text-duoGray-pencil hover:text-duoGray-charcoal'
-              }`}
-            >
-              <BookOpen size={13} />
-              <span>Přehled</span>
-            </button>
-            <button
-              onClick={() => {
-                playPopSound();
-                setActiveTab('raw');
-              }}
-              className={`px-3 py-1 rounded-duo text-xs font-feather font-extrabold flex items-center gap-1.5 transition ${
-                activeTab === 'raw'
-                  ? 'bg-white text-sparkBlue shadow-xs border-2 border-duoGray-border'
-                  : 'text-duoGray-pencil hover:text-duoGray-charcoal'
-              }`}
-            >
-              <Code2 size={13} />
-              <span>Zdrojový kód</span>
-            </button>
+        {/* Tab switcher or Edit bar */}
+        {isEditing ? (
+          <div className="px-4 py-2 bg-sparkBlue/10 border-b border-sparkBlue/30 flex items-center justify-between">
+            <span className="text-xs font-feather font-black text-sparkBlue uppercase tracking-wider flex items-center gap-1.5">
+              <Pencil size={13} />
+              Režim úpravy zápisku
+            </span>
+            <span className="text-[11px] font-bold text-duoGray-pencil">
+              Změny se ihned synchronizují
+            </span>
           </div>
+        ) : (
+          <div className="px-4 pt-2.5 pb-2 bg-gray-50 flex items-center justify-between border-b border-gray-200">
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  playPopSound();
+                  setActiveTab('preview');
+                }}
+                className={`px-3 py-1 rounded-duo text-xs font-feather font-extrabold flex items-center gap-1.5 transition ${
+                  activeTab === 'preview'
+                    ? 'bg-white text-eagerGreen shadow-xs border-2 border-duoGray-border'
+                    : 'text-duoGray-pencil hover:text-duoGray-charcoal'
+                }`}
+              >
+                <BookOpen size={13} />
+                <span>Přehled</span>
+              </button>
+              <button
+                onClick={() => {
+                  playPopSound();
+                  setActiveTab('raw');
+                }}
+                className={`px-3 py-1 rounded-duo text-xs font-feather font-extrabold flex items-center gap-1.5 transition ${
+                  activeTab === 'raw'
+                    ? 'bg-white text-sparkBlue shadow-xs border-2 border-duoGray-border'
+                    : 'text-duoGray-pencil hover:text-duoGray-charcoal'
+                }`}
+              >
+                <Code2 size={13} />
+                <span>Zdrojový kód</span>
+              </button>
+            </div>
 
-          <span className="text-[11px] font-bold text-duoGray-pencil">
-            {note.readingTime} čtení
-          </span>
-        </div>
+            <span className="text-[11px] font-bold text-duoGray-pencil">
+              {note.readingTime} čtení
+            </span>
+          </div>
+        )}
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-4 select-text">
-          {activeTab === 'preview' ? (
+          {isEditing ? (
+            <div className="flex flex-col gap-3.5">
+              <div>
+                <label className="text-[11px] font-feather font-black uppercase text-duoGray-pencil tracking-wider block mb-1">
+                  Název zápisku
+                </label>
+                <input
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  placeholder="Zadej název tématu..."
+                  className="w-full px-3.5 py-2.5 rounded-xl border-2 border-duoGray-border font-feather font-black text-sm text-duoGray-charcoal focus:border-sparkBlue focus:outline-hidden"
+                />
+              </div>
+
+              <div className="flex-1 flex flex-col">
+                <label className="text-[11px] font-feather font-black uppercase text-duoGray-pencil tracking-wider block mb-1">
+                  Obsah zápisku (Markdown & KaTeX)
+                </label>
+                <textarea
+                  value={editMarkdown}
+                  onChange={(e) => setEditMarkdown(e.target.value)}
+                  rows={10}
+                  className="w-full p-3.5 rounded-xl border-2 border-duoGray-border font-mono text-xs text-duoGray-charcoal focus:border-sparkBlue focus:outline-hidden leading-relaxed resize-y min-h-[220px]"
+                  placeholder="Piš Markdown nebo KaTeX vzorce ($$...$$)..."
+                />
+              </div>
+            </div>
+          ) : activeTab === 'preview' ? (
             <div className="text-duoGray-charcoal">
               <div className="bg-storybookGreen/30 rounded-2xl p-3 border-2 border-eagerGreen/40 mb-4">
                 <div className="text-[11px] font-feather font-black uppercase text-eagerGreen-dark mb-1">
@@ -144,8 +226,31 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
           )}
         </div>
 
-        {/* Footer with copy button - only in raw format view */}
-        {activeTab === 'raw' && (
+        {/* Footer */}
+        {isEditing ? (
+          <div className="p-3.5 bg-white border-t-2 border-duoGray-border flex gap-2.5">
+            <button
+              onClick={() => {
+                playPopSound();
+                setEditTitle(note.title);
+                setEditMarkdown(note.markdown);
+                setIsEditing(false);
+              }}
+              className="flex-1 duo-btn duo-btn-white py-2.5 px-3 text-xs font-feather font-black uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <RotateCcw size={15} />
+              <span>Zrušit</span>
+            </button>
+            <button
+              onClick={handleSaveEdit}
+              disabled={isSaving || !editTitle.trim()}
+              className="flex-1 duo-btn duo-btn-green py-2.5 px-3 text-xs font-feather font-black uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              <Save size={15} />
+              <span>{isSaving ? 'Ukládám...' : 'Uložit změny'}</span>
+            </button>
+          </div>
+        ) : activeTab === 'raw' && (
           <div className="p-3.5 bg-white border-t-2 border-duoGray-border">
             <button
               onClick={handleCopy}

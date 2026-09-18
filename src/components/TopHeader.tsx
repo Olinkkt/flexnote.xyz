@@ -9,6 +9,7 @@ interface TopHeaderProps {
   selectedSubject: SubjectType;
   onSelectSubject: (subject: SubjectType) => void;
   totalNotes: number;
+  isRealtimeConnected?: boolean;
 }
 
 export const TopHeader: React.FC<TopHeaderProps> = ({
@@ -16,6 +17,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   selectedSubject,
   onSelectSubject,
   totalNotes,
+  isRealtimeConnected = false,
 }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
@@ -30,7 +32,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   return (
     <div className="sticky top-0 z-40 bg-white border-b-2 border-duoGray-border px-4 py-3 shadow-xs select-none">
       <div className="flex items-center justify-between">
-        {/* Left: App Title & Note Count */}
+        {/* Left: App Title & Note Count & Realtime Badge */}
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-duo bg-storybookGreen border-2 border-eagerGreen flex items-center justify-center text-eagerGreen shadow-xs">
             <BookOpen size={20} className="stroke-[2.5]" />
@@ -39,9 +41,20 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             <h1 className="font-feather font-black text-[20px] text-duoGray-charcoal leading-none">
               Flexnote
             </h1>
-            <span className="text-[11px] font-bold text-duoGray-pencil">
-              {totalNotes} {totalNotes === 1 ? 'zápisek' : totalNotes < 5 ? 'zápisky' : 'zápisků'}
-            </span>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="text-[11px] font-bold text-duoGray-pencil">
+                {totalNotes} {totalNotes === 1 ? 'zápisek' : totalNotes < 5 ? 'zápisky' : 'zápisků'}
+              </span>
+              {isRealtimeConnected && (
+                <span
+                  title="Živé cloudové propojení (Supabase Realtime aktivní)"
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-storybookGreen/70 border border-eagerGreen/40 text-[9px] font-feather font-black text-eagerGreen-dark tracking-wide animate-in fade-in"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-eagerGreen animate-pulse" />
+                  Živě
+                </span>
+              )}
+            </div>
           </div>
         </div>
 

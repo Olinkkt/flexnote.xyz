@@ -25,20 +25,36 @@ export async function fetchNotesFromCloud(userId?: string): Promise<NoteItem[]> 
     throw error;
   }
 
-  return (data || []).map((row) => ({
+  return (data || []).map(mapRowToNoteItem);
+}
+
+/**
+ * Maps a Supabase notes row to the frontend NoteItem format
+ */
+export function mapRowToNoteItem(row: any): NoteItem {
+  return {
     id: row.id,
     title: row.title,
-    subject: row.subject as SubjectType,
-    date: row.created_at ? new Date(row.created_at).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Právě teď',
+    subject: (row.subject as SubjectType) || 'czech',
+    date: row.created_at
+      ? new Date(row.created_at).toLocaleDateString('cs-CZ', {
+          day: 'numeric',
+          month: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : 'Právě teď',
     timestamp: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
-    thumbnailUrl: row.thumbnail_url || 'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=500&auto=format&fit=crop&q=80',
+    thumbnailUrl:
+      row.thumbnail_url ||
+      'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=500&auto=format&fit=crop&q=80',
     readingTime: row.reading_time || '2 min',
     accuracy: 98,
     status: 'new',
     summary: row.summary || '',
-    tags: row.tags || [row.subject, 'Zápisky'],
+    tags: row.tags || [row.subject || 'Zápisky'],
     markdown: row.markdown,
-  }));
+  };
 }
 
 /**
@@ -65,12 +81,37 @@ export async function saveNoteToCloud(note: NoteItem, userId?: string): Promise<
     throw error;
   }
 
-  return {
-    ...note,
-    id: data.id,
-    date: data.created_at ? new Date(data.created_at).toLocaleDateString('cs-CZ', { day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' }) : note.date,
-    timestamp: data.created_at ? new Date(data.created_at).getTime() : note.timestamp,
+  return mapRowToNoteItem(data);
+}
+
+/**
+ * Update an existing note in Supabase
+ */
+export async function updateNoteInCloud(
+  noteId: string,
+  updates: Partial<Pick<NoteItem, 'title' | 'markdown' | 'summary' | 'subject'>>
+): Promise<NoteItem> {
+  const dbUpdates: Database['public']['Tables']['notes']['Update'] = {
+    updated_at: new Date().toISOString(),
   };
+  if (updates.title !== undefined) dbUpdates.title = updates.title;
+  if (updates.markdown !== undefined) dbUpdates.markdown = updates.markdown;
+  if (updates.summary !== undefined) dbUpdates.summary = updates.summary;
+  if (updates.subject !== undefined) dbUpdates.subject = updates.subject;
+
+  const { data, error } = await supabase
+    .from('notes')
+    .update(dbUpdates)
+    .eq('id', noteId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Failed to update note in Supabase:', error.message);
+    throw error;
+  }
+
+  return mapRowToNoteItem(data);
 }
 
 /**
@@ -82,6 +123,91 @@ export async function deleteNoteFromCloud(noteId: string): Promise<void> {
     console.error('Failed to delete note from Supabase:', error.message);
     throw error;
   }
+}
+
+export interface RealtimeNotesCallbacks {
+  onInsert?: (newNote: NoteItem) => void;
+  onUpdate?: (updatedNote: NoteItem) => void;
+  onDelete?: (deletedNoteId: string) => void;
+  onStatusChange?: (status: 'SUBSCRIBED' | 'TIMED_OUT' | 'CLOSED' | 'CHANNEL_ERROR') => void;
+}
+
+/**
+ * Subscribes to Realtime Postgres changes for a user's notes
+ */
+export function subscribeToUserNotes(
+  userId: string,
+  callbacks: RealtimeNotesCallbacks
+) {
+  const channel = supabase
+    .channel(`realtime-notes-${userId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'notes',
+      },
+      (payload) => {
+        const newRow = payload.new as any;
+        const oldRow = payload.old as any;
+
+        if (payload.eventType === 'INSERT') {
+          if (newRow && (!newRow.user_id || newRow.user_id === userId)) {
+            const note = mapRowToNoteItem(newRow);
+            callbacks.onInsert?.(note);
+          }
+        } else if (payload.eventType === 'UPDATE') {
+          if (newRow && (!newRow.user_id || newRow.user_id === userId)) {
+            const note = mapRowToNoteItem(newRow);
+            callbacks.onUpdate?.(note);
+          }
+        } else if (payload.eventType === 'DELETE') {
+          if (oldRow && oldRow.id) {
+            if (!oldRow.user_id || oldRow.user_id === userId) {
+              callbacks.onDelete?.(oldRow.id);
+            }
+          }
+        }
+      }
+    )
+    .subscribe((status) => {
+      callbacks.onStatusChange?.(status as any);
+    });
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}
+
+/**
+ * Subscribes to Realtime changes for a user's profile
+ */
+export function subscribeToUserProfile(
+  userId: string,
+  onProfileUpdate: (profile: UserProfile) => void
+) {
+  const channel = supabase
+    .channel(`realtime-profile-${userId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'profiles',
+        filter: `id=eq.${userId}`,
+      },
+      (payload) => {
+        if (payload.new) {
+          onProfileUpdate(payload.new as UserProfile);
+        }
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
 }
 
 export interface UserProfile {

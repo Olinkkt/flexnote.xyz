@@ -14,13 +14,18 @@ import {
   supabase,
   fetchNotesFromCloud,
   saveNoteToCloud,
+  updateNoteInCloud,
   deleteNoteFromCloud,
+  subscribeToUserNotes,
+  subscribeToUserProfile,
   fetchUserProfile,
   checkCurrentUserVerification,
   signOutUser,
   UserProfile,
   User,
 } from './services/supabase';
+import { playSuccessChime } from './utils/audio';
+import { Toast } from './components/Toast';
 import { AuthScreen } from './components/AuthScreen';
 import { ConfirmEmailScreen } from './components/ConfirmEmailScreen';
 import { ProfileView } from './components/ProfileView';
@@ -47,6 +52,8 @@ export const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
+  const [syncToast, setSyncToast] = useState<{ title: string; message: string } | null>(null);
   const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(() => {
     try {
       return localStorage.getItem('flexnote_unconfirmed_email');
@@ -107,6 +114,65 @@ export const App: React.FC = () => {
     };
   }, []);
 
+  // 3. Supabase Realtime live sync across devices
+  useEffect(() => {
+    if (!user || !isEmailVerified) {
+      setIsRealtimeConnected(false);
+      return;
+    }
+
+    const unsubscribeNotes = subscribeToUserNotes(user.id, {
+      onInsert: (newNote) => {
+        setNotes((prev) => {
+          // If note is already present by exact ID, ignore
+          if (prev.some((n) => n.id === newNote.id)) {
+            return prev;
+          }
+
+          // Check if there's a temporary local optimistic note created within the last 25 seconds
+          const optimisticIndex = prev.findIndex(
+            (n) => n.id.startsWith('note-') && n.title === newNote.title && Math.abs(n.timestamp - newNote.timestamp) < 25000
+          );
+
+          if (optimisticIndex !== -1) {
+            const updated = [...prev];
+            updated[optimisticIndex] = newNote;
+            return updated;
+          }
+
+          // Note was created on another device (e.g. mobile phone)!
+          playSuccessChime();
+          setSyncToast({
+            title: 'Zápisek synchronizován',
+            message: `„${newNote.title}“ byl načten v reálném čase z jiného zařízení.`,
+          });
+          return [newNote, ...prev];
+        });
+      },
+      onUpdate: (updatedNote) => {
+        setNotes((prev) => prev.map((n) => (n.id === updatedNote.id ? updatedNote : n)));
+        setSelectedNote((curr) => (curr?.id === updatedNote.id ? updatedNote : curr));
+      },
+      onDelete: (deletedNoteId) => {
+        setNotes((prev) => prev.filter((n) => n.id !== deletedNoteId));
+        setSelectedNote((curr) => (curr?.id === deletedNoteId ? null : curr));
+      },
+      onStatusChange: (status) => {
+        setIsRealtimeConnected(status === 'SUBSCRIBED');
+      },
+    });
+
+    const unsubscribeProfile = subscribeToUserProfile(user.id, (updatedProfile) => {
+      setUserProfile(updatedProfile);
+    });
+
+    return () => {
+      unsubscribeNotes();
+      unsubscribeProfile();
+      setIsRealtimeConnected(false);
+    };
+  }, [user?.id, isEmailVerified]);
+
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
@@ -146,6 +212,19 @@ export const App: React.FC = () => {
       await deleteNoteFromCloud(noteId);
     } catch (err) {
       console.error('Failed to delete note from Supabase:', err);
+    }
+  };
+
+  // Handle note updates (e.g. from NoteDetailModal edit mode)
+  const handleUpdateNote = async (noteId: string, updates: Partial<NoteItem>) => {
+    // Optimistic local update
+    setNotes((prev) => prev.map((n) => (n.id === noteId ? { ...n, ...updates } : n)));
+    setSelectedNote((curr) => (curr?.id === noteId ? { ...curr, ...updates } : curr));
+
+    try {
+      await updateNoteInCloud(noteId, updates);
+    } catch (err) {
+      console.error('Failed to update note in Supabase:', err);
     }
   };
 
@@ -225,12 +304,13 @@ export const App: React.FC = () => {
         />
       ) : (
         <>
-          {/* Top Header with App Title on left and Class Switcher Dropdown on right */}
+          {/* Top Header with App Title on left, Class Switcher Dropdown on right, and Realtime sync indicator */}
           <TopHeader
             subjects={SUBJECTS}
             selectedSubject={selectedSubject}
             onSelectSubject={(subj) => setSelectedSubject(subj)}
             totalNotes={notes.length}
+            isRealtimeConnected={isRealtimeConnected}
           />
 
           {/* Main Content Area */}
@@ -293,9 +373,21 @@ export const App: React.FC = () => {
               subjects={SUBJECTS}
               onClose={() => setSelectedNote(null)}
               onDeleteNote={handleDeleteNote}
+              onUpdateNote={handleUpdateNote}
             />
           )}
         </>
+      )}
+
+      {/* Realtime Multi-device Sync Toast */}
+      {syncToast && (
+        <Toast
+          type="success"
+          title={syncToast.title}
+          message={syncToast.message}
+          onClose={() => setSyncToast(null)}
+          durationMs={4500}
+        />
       )}
     </MobileFrame>
   );
