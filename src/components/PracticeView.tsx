@@ -177,8 +177,8 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
               playPopSound();
               const isTrouble = troublesomeCards.length > 0;
               setCustomSRSSession({
-                cards: isTrouble ? troublesomeCards : dueCards,
-                title: isTrouble ? 'Problematické pojmy' : 'Dnešní opakování',
+                cards: srsCardsToReview,
+                title: isTrouble ? 'Problematické pojmy & opakování' : 'Dnešní opakování',
               });
             }}
             className="duo-btn duo-btn-green py-2 px-3.5 text-xs font-feather font-black uppercase tracking-wider shrink-0 cursor-pointer shadow-xs"

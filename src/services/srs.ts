@@ -70,7 +70,7 @@ export function calculateNextSRS(
       easeFactor: newEase,
       dueDate: now + interval * ONE_DAY_MS,
       lastReviewedAt: now,
-      lapses,
+      lapses: Math.max(0, lapses - 1),
       stability: interval,
     };
   }
@@ -89,7 +89,7 @@ export function calculateNextSRS(
       easeFactor: newEase,
       dueDate: now + interval * ONE_DAY_MS,
       lastReviewedAt: now,
-      lapses,
+      lapses: 0, // Pojem byl úspěšně zvládnut
       stability: interval,
     };
   }
@@ -107,7 +107,7 @@ export function calculateNextSRS(
     easeFactor: currentEase,
     dueDate: now + interval * ONE_DAY_MS,
     lastReviewedAt: now,
-    lapses,
+    lapses: 0, // Pojem byl úspěšně zvládnut
     stability: interval,
   };
 }
@@ -121,12 +121,15 @@ export function isDueForReview(card: FlashcardItem): boolean {
 }
 
 /**
- * Identifies concepts that cause trouble to the student (lapses >= 1 or low retention).
+ * Identifies concepts that cause trouble to the student (unresolved failure or low retention).
  */
 export function isTroublesome(card: FlashcardItem): boolean {
   if (!card.srs) return false;
-  if (card.srs.lapses > 0) return true;
+  // Pokud student u posledního zkoušení selhal (repetition byla resetována na 0)
   if (card.srs.repetition === 0 && card.srs.lastReviewedAt) return true;
+  // Pokud jsou aktivní lapses a pojem nebyl znovu úspěšně zopakován
+  if (card.srs.lapses > 0 && card.srs.repetition === 0) return true;
+  // Nebo pokud retence podle křivky zapomínání klesla pod kritickou mez (65 %)
   return calculateRetention(card.srs) < 65;
 }
 
