@@ -67,11 +67,11 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
               username: profile?.username || entry.username || 'já',
               fullName: profile?.full_name || entry.fullName,
               school: profile?.school || entry.school,
-              studyTimeSeconds: Math.max(entry.studyTimeSeconds, gamification.studyTimeSeconds),
-              weeklyStudySeconds: Math.max(entry.weeklyStudySeconds, gamification.weeklyStudySeconds),
-              diamonds: Math.max(entry.diamonds, gamification.diamonds),
-              weeklyDiamonds: Math.max(entry.weeklyDiamonds, gamification.weeklyDiamonds),
-              streakDays: Math.max(entry.streakDays, gamification.streakDays),
+              studyTimeSeconds: gamification.studyTimeSeconds,
+              weeklyStudySeconds: gamification.weeklyStudySeconds,
+              diamonds: gamification.diamonds,
+              weeklyDiamonds: gamification.weeklyDiamonds,
+              streakDays: gamification.streakDays,
             };
           }
           return entry;

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { GamificationState } from '../types/notes';
 import { UserProfile, updateUserGamification, purchaseStreakFreeze } from './supabase';
 
-const GAMIFICATION_STORAGE_KEY = 'flexnote_gamification_v1';
+const GAMIFICATION_STORAGE_KEY = 'flexnote_gamification_v2';
 const GAMIFICATION_EVENT = 'flexnote_gamification_updated';
 
 // Helper to get local date string YYYY-MM-DD
@@ -30,20 +30,25 @@ export function getMondayOfCurrentWeek(d: Date = new Date()): string {
 }
 
 const DEFAULT_STATE: GamificationState = {
-  diamonds: 50, // Welcome gift
-  weeklyDiamonds: 25,
-  streakDays: 1,
-  bestStreak: 1,
-  streakFreezes: 1,
-  studyTimeSeconds: 600, // 10 mins baseline
-  weeklyStudySeconds: 600,
-  lastStudyDate: getLocalDateString(),
+  diamonds: 0,
+  weeklyDiamonds: 0,
+  streakDays: 0,
+  bestStreak: 0,
+  streakFreezes: 0,
+  studyTimeSeconds: 0,
+  weeklyStudySeconds: 0,
+  lastStudyDate: null,
 };
 
 /**
  * Load gamification state from localStorage or initialize with profile
  */
 export function loadGamificationState(profile?: UserProfile | null): GamificationState {
+  // Clear legacy mock baseline from v1 if present in browser
+  try {
+    localStorage.removeItem('flexnote_gamification_v1');
+  } catch {}
+
   let state = { ...DEFAULT_STATE };
 
   try {
@@ -55,16 +60,15 @@ export function loadGamificationState(profile?: UserProfile | null): Gamificatio
   } catch {}
 
   if (profile) {
-    state.diamonds = Math.max(state.diamonds, profile.diamonds ?? 0);
-    state.weeklyDiamonds = Math.max(state.weeklyDiamonds, profile.weekly_diamonds ?? 0);
-    state.streakDays = Math.max(state.streakDays, profile.streak_days ?? 0);
-    state.bestStreak = Math.max(state.bestStreak, profile.best_streak ?? state.streakDays);
-    state.streakFreezes = profile.streak_freezes ?? state.streakFreezes;
-    state.studyTimeSeconds = Math.max(state.studyTimeSeconds, profile.study_time_seconds ?? 0);
-    state.weeklyStudySeconds = Math.max(state.weeklyStudySeconds, profile.weekly_study_seconds ?? 0);
-    if (profile.last_study_date) {
-      state.lastStudyDate = profile.last_study_date;
-    }
+    // Database profile is the authoritative source of truth for logged-in user
+    state.diamonds = profile.diamonds ?? 0;
+    state.weeklyDiamonds = profile.weekly_diamonds ?? 0;
+    state.streakDays = profile.streak_days ?? 0;
+    state.bestStreak = profile.best_streak ?? 0;
+    state.streakFreezes = profile.streak_freezes ?? 0;
+    state.studyTimeSeconds = profile.study_time_seconds ?? 0;
+    state.weeklyStudySeconds = profile.weekly_study_seconds ?? 0;
+    state.lastStudyDate = profile.last_study_date ?? null;
   }
 
   // Check weekly reset (compare stored Monday with current Monday)
@@ -201,6 +205,9 @@ export function useGamification(profile?: UserProfile | null, userId?: string) {
     if (profile) {
       const merged = loadGamificationState(profile);
       setGamification(merged);
+      try {
+        localStorage.setItem(GAMIFICATION_STORAGE_KEY, JSON.stringify(merged));
+      } catch {}
     }
   }, [profile]);
 
