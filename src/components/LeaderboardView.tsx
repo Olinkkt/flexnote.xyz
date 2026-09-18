@@ -288,14 +288,14 @@ Trumfneš mě? 🚀`;
         </div>
       </div>
 
-      {/* 3D Podium Card for TOP 3 - Always visible */}
-      <div className="my-1 py-5 px-3 bg-white rounded-3xl border-2 border-duoGray-border border-b-[5px] shadow-sm">
+      {/* Podium Card for TOP 3 - Always visible */}
+      <div className="my-1 pt-8 pb-4 px-3 bg-white rounded-3xl border-2 border-duoGray-border border-b-[5px] shadow-sm">
         <div className="flex items-end justify-center gap-2 sm:gap-4 max-w-xs sm:max-w-sm mx-auto">
           {/* 2nd place (Silver - Left) */}
           <div className="flex-1 flex flex-col items-center">
             {entries[1] ? (
               <div className="w-full flex flex-col items-center animate-in slide-in-from-bottom-2 duration-200">
-                <div className="w-12 h-12 rounded-full bg-slate-100 border-2 border-slate-300 border-b-[3px] border-b-slate-400 flex items-center justify-center font-feather font-black text-sm text-slate-700 shadow-2xs relative mb-1.5">
+                <div className="w-12 h-12 rounded-full bg-slate-100 border-2 border-slate-300 flex items-center justify-center font-feather font-black text-sm text-slate-700 shadow-2xs relative mb-1.5">
                   <span className="text-base">🥈</span>
                   {entries[1].isCurrentUser && (
                     <span className="absolute -top-1 -right-1 bg-eagerGreen text-white text-[9px] px-1 rounded-full font-black border-b-2 border-eagerGreen-dark shadow-xs">
@@ -323,10 +323,9 @@ Trumfneš mě? 🚀`;
                 </div>
               </div>
             )}
-            {/* 3D Silver Pedestal - 2nd place medium height */}
-            <div className="w-full h-[80px] bg-gradient-to-b from-slate-100 via-slate-200 to-slate-300 rounded-t-2xl border-2 border-slate-300 border-b-[6px] border-b-slate-400 shadow-xs flex flex-col items-center justify-center relative overflow-hidden">
-              <div className="absolute top-0 left-0 right-0 h-1.5 bg-white/70 rounded-t-xl" />
-              <span className="font-feather font-black text-2xl text-slate-700 drop-shadow-xs">2</span>
+            {/* Flat Silver Pedestal - 2nd place medium height */}
+            <div className="w-full h-[75px] bg-slate-200/80 rounded-t-2xl flex items-center justify-center">
+              <span className="font-feather font-black text-2xl text-slate-600">2</span>
             </div>
           </div>
 
@@ -335,10 +334,10 @@ Trumfneš mě? 🚀`;
             {entries[0] ? (
               <div className="w-full flex flex-col items-center animate-in slide-in-from-bottom-3 duration-200">
                 <div className="relative mb-1.5 flex flex-col items-center">
-                  <div className="absolute -top-5 left-0 right-0 flex justify-center pointer-events-none">
-                    <Crown size={22} className="text-amber-500 fill-amber-400 animate-bounce" />
+                  <div className="absolute -top-4 left-0 right-0 flex justify-center pointer-events-none">
+                    <Crown size={20} className="text-amber-500 fill-amber-400 animate-bounce" />
                   </div>
-                  <div className="w-14 h-14 rounded-full bg-amber-50 border-2 border-amber-400 border-b-[3px] border-b-amber-500 flex items-center justify-center font-feather font-black text-lg text-amber-800 shadow-xs">
+                  <div className="w-14 h-14 rounded-full bg-amber-50 border-2 border-amber-400 flex items-center justify-center font-feather font-black text-lg text-amber-800 shadow-xs">
                     <span className="text-xl">🥇</span>
                     {entries[0].isCurrentUser && (
                       <span className="absolute -top-1 -right-1 bg-eagerGreen text-white text-[9px] px-1.5 rounded-full font-black border-b-2 border-eagerGreen-dark shadow-xs">
@@ -357,8 +356,8 @@ Trumfneš mě? 🚀`;
             ) : (
               <div className="w-full flex flex-col items-center opacity-60">
                 <div className="relative mb-1.5 flex flex-col items-center">
-                  <div className="absolute -top-5 left-0 right-0 flex justify-center pointer-events-none">
-                    <Crown size={22} className="text-amber-400 fill-amber-300 opacity-60" />
+                  <div className="absolute -top-4 left-0 right-0 flex justify-center pointer-events-none">
+                    <Crown size={20} className="text-amber-400 fill-amber-300 opacity-60" />
                   </div>
                   <div className="w-14 h-14 rounded-full bg-amber-50/50 border-2 border-dashed border-amber-300 flex items-center justify-center text-amber-500 shadow-xs">
                     <span className="text-xl grayscale opacity-60">🥇</span>
@@ -372,10 +371,9 @@ Trumfneš mě? 🚀`;
                 </div>
               </div>
             )}
-            {/* 3D Gold Pedestal - 1st place tallest */}
-            <div className="w-full h-[115px] bg-gradient-to-b from-amber-300 via-amber-400 to-amber-500 rounded-t-2xl border-2 border-amber-400 border-b-[6px] border-b-amber-600 shadow-sm flex flex-col items-center justify-center relative overflow-hidden">
-              <div className="absolute top-0 left-0 right-0 h-2 bg-amber-200/70 rounded-t-xl" />
-              <span className="font-feather font-black text-3xl text-amber-950 drop-shadow-xs">1</span>
+            {/* Flat Gold Pedestal - 1st place tallest */}
+            <div className="w-full h-[105px] bg-amber-200/90 rounded-t-2xl flex items-center justify-center">
+              <span className="font-feather font-black text-3xl text-amber-800">1</span>
             </div>
           </div>
 
@@ -383,7 +381,7 @@ Trumfneš mě? 🚀`;
           <div className="flex-1 flex flex-col items-center">
             {entries[2] ? (
               <div className="w-full flex flex-col items-center animate-in slide-in-from-bottom-1 duration-200">
-                <div className="w-12 h-12 rounded-full bg-orange-50 border-2 border-orange-300 border-b-[3px] border-b-orange-400 flex items-center justify-center font-feather font-black text-sm text-orange-900 shadow-2xs relative mb-1.5">
+                <div className="w-12 h-12 rounded-full bg-orange-50 border-2 border-orange-300 flex items-center justify-center font-feather font-black text-sm text-orange-900 shadow-2xs relative mb-1.5">
                   <span className="text-base">🥉</span>
                   {entries[2].isCurrentUser && (
                     <span className="absolute -top-1 -right-1 bg-eagerGreen text-white text-[9px] px-1 rounded-full font-black border-b-2 border-eagerGreen-dark shadow-xs">
@@ -411,10 +409,9 @@ Trumfneš mě? 🚀`;
                 </div>
               </div>
             )}
-            {/* 3D Bronze Pedestal - 3rd place lowest */}
-            <div className="w-full h-[55px] bg-gradient-to-b from-orange-100 via-orange-200 to-orange-300 rounded-t-2xl border-2 border-orange-300 border-b-[6px] border-b-orange-500 shadow-xs flex flex-col items-center justify-center relative overflow-hidden">
-              <div className="absolute top-0 left-0 right-0 h-1.5 bg-orange-50/70 rounded-t-xl" />
-              <span className="font-feather font-black text-xl text-orange-950 drop-shadow-xs">3</span>
+            {/* Flat Bronze Pedestal - 3rd place lowest */}
+            <div className="w-full h-[50px] bg-orange-200/80 rounded-t-2xl flex items-center justify-center">
+              <span className="font-feather font-black text-xl text-orange-800">3</span>
             </div>
           </div>
         </div>
