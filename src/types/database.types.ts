@@ -123,6 +123,39 @@ export type Database = {
         }
         Relationships: []
       }
+      custom_schools: {
+        Row: {
+          category: string | null
+          city: string | null
+          created_at: string | null
+          id: string
+          name: string
+          status: string
+          submitted_by: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          city?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+          status?: string
+          submitted_by?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          city?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          status?: string
+          submitted_by?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

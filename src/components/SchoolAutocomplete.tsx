@@ -1,23 +1,28 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { School, Search, X, MapPin, Plus, Check } from 'lucide-react';
-import { SchoolItem, searchSchools, loadSchools } from '../services/schoolsService';
+import { SchoolItem, searchSchools, loadSchools, submitCustomSchool } from '../services/schoolsService';
 import { playPopSound } from '../utils/audio';
 
 interface SchoolAutocompleteProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  userId?: string;
+  onShowToast?: (title: string, message: string) => void;
 }
 
 export const SchoolAutocomplete: React.FC<SchoolAutocompleteProps> = ({
   value,
   onChange,
   placeholder = 'Vyhledej svou školu (např. Nerudy, Panská, Campanus)...',
+  userId,
+  onShowToast,
 }) => {
   const [query, setQuery] = useState(value);
   const [suggestions, setSuggestions] = useState<SchoolItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [customMessage, setCustomMessage] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Sync internal state when external value changes
@@ -81,6 +86,7 @@ export const SchoolAutocomplete: React.FC<SchoolAutocompleteProps> = ({
     // Save purely the school name (without city in parentheses as requested by user)
     onChange(school.name);
     setQuery(school.name);
+    setCustomMessage(null);
     setIsOpen(false);
   };
 
@@ -91,6 +97,15 @@ export const SchoolAutocomplete: React.FC<SchoolAutocompleteProps> = ({
       onChange(clean);
       setQuery(clean);
       setIsOpen(false);
+
+      // Submit to moderation queue
+      submitCustomSchool(clean, undefined, undefined, userId).then((res) => {
+        if (res.isNew) {
+          setCustomMessage('Škola uložena. Nový název byl odeslán ke schválení do rejstříku.');
+          setTimeout(() => setCustomMessage(null), 5000);
+          onShowToast?.('Škola uložena', 'Nový název byl odeslán ke schválení administrátorem.');
+        }
+      });
     }
   };
 
@@ -98,6 +113,7 @@ export const SchoolAutocomplete: React.FC<SchoolAutocompleteProps> = ({
     playPopSound();
     setQuery('');
     onChange('');
+    setCustomMessage(null);
     setIsOpen(true);
   };
 
@@ -146,6 +162,13 @@ export const SchoolAutocomplete: React.FC<SchoolAutocompleteProps> = ({
           <Search size={14} className="absolute right-3 text-duoGray-pencil/50 pointer-events-none" />
         )}
       </div>
+
+      {customMessage && (
+        <div className="mt-1.5 px-2.5 py-1 rounded-xl bg-sparkBlue-tint text-sparkBlue text-[10.5px] font-bold flex items-center gap-1.5 animate-in fade-in">
+          <Check size={13} className="shrink-0" />
+          <span>{customMessage}</span>
+        </div>
+      )}
 
       {/* Autocomplete Dropdown */}
       {isOpen && (

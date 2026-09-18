@@ -574,6 +574,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   value={school}
                   onChange={(val) => setSchool(val)}
                   placeholder="Vyhledej svou školu (např. Nerudy, Panská, Campanus)..."
+                  userId={user.id}
                 />
               </div>
 
