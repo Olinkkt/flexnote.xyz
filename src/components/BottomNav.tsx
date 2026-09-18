@@ -1,8 +1,8 @@
 import React from 'react';
-import { BookOpen, Camera, Search, User } from 'lucide-react';
+import { BookOpen, Camera, User } from 'lucide-react';
 import { playPopSound } from '../utils/audio';
 
-export type TabType = 'notes' | 'search' | 'profile';
+export type TabType = 'notes' | 'profile';
 
 interface BottomNavProps {
   activeTab: TabType;
@@ -23,7 +23,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           playPopSound();
           onTabChange('notes');
         }}
-        className={`flex flex-col items-center justify-center py-1 px-3 rounded-duo transition-colors cursor-pointer ${
+        className={`flex flex-col items-center justify-center py-1 px-4 rounded-duo transition-colors cursor-pointer ${
           activeTab === 'notes' ? 'text-eagerGreen' : 'text-duoGray-pencil hover:text-duoGray-charcoal'
         }`}
       >
@@ -41,7 +41,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           playPopSound();
           onOpenScan();
         }}
-        className="flex flex-col items-center justify-center py-1 px-3 cursor-pointer group"
+        className="flex flex-col items-center justify-center py-1 px-4 cursor-pointer group"
         title="Odfotit zápisky"
       >
         <div className="w-10 h-10 rounded-full bg-eagerGreen border-b-[3px] border-eagerGreen-dark flex items-center justify-center text-white shadow-xs group-hover:brightness-105 active:translate-y-[1px] active:border-b-[1.5px] transition-all">
@@ -52,36 +52,18 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         </span>
       </button>
 
-      {/* Search tab */}
-      <button
-        onClick={() => {
-          playPopSound();
-          onTabChange('search');
-        }}
-        className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-duo transition-colors cursor-pointer ${
-          activeTab === 'search' ? 'text-eagerGreen' : 'text-duoGray-pencil hover:text-duoGray-charcoal'
-        }`}
-      >
-        <div className="w-10 h-10 flex items-center justify-center">
-          <Search size={22} className={activeTab === 'search' ? 'stroke-[2.5]' : 'stroke-[2]'} />
-        </div>
-        <span className="text-[11px] font-feather font-black mt-0.5 tracking-tight">
-          Hledat
-        </span>
-      </button>
-
       {/* Profile tab */}
       <button
         onClick={() => {
           playPopSound();
           onTabChange('profile');
         }}
-        className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-duo transition-colors cursor-pointer ${
+        className={`flex flex-col items-center justify-center py-1 px-4 rounded-duo transition-colors cursor-pointer ${
           activeTab === 'profile' ? 'text-eagerGreen' : 'text-duoGray-pencil hover:text-duoGray-charcoal'
         }`}
       >
         <div className="w-10 h-10 flex items-center justify-center">
-          <User size={22} className={activeTab === 'profile' ? 'stroke-[2.5]' : 'stroke-[2]'} />
+          <User size={24} className={activeTab === 'profile' ? 'stroke-[2.5]' : 'stroke-[2]'} />
         </div>
         <span className="text-[11px] font-feather font-black mt-0.5 tracking-tight">
           Profil

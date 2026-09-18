@@ -6,7 +6,6 @@ import { RecentNotesList } from './components/RecentNotesList';
 import { ScanModal } from './components/ScanModal';
 import { NoteDetailModal } from './components/NoteDetailModal';
 import { BottomNav, TabType } from './components/BottomNav';
-import { NotesLibraryView } from './components/NotesLibraryView';
 
 import { SUBJECTS, INITIAL_NOTES } from './data/mockNotes';
 import { NoteItem, SubjectType } from './types/notes';
@@ -30,6 +29,8 @@ import { AuthScreen } from './components/AuthScreen';
 import { ConfirmEmailScreen } from './components/ConfirmEmailScreen';
 import { ProfileView } from './components/ProfileView';
 import { ExportNotesModal } from './components/ExportNotesModal';
+import { useOfflineSync, enqueueOfflineAction } from './services/offlineSync';
+import { OfflineBanner } from './components/OfflineBanner';
 
 const STORAGE_KEY = 'duo_notes_v1_data';
 
@@ -61,6 +62,33 @@ export const App: React.FC = () => {
       return localStorage.getItem('flexnote_unconfirmed_email');
     } catch {
       return null;
+    }
+  });
+
+  const [isGuestMode, setIsGuestMode] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('flexnote_guest_mode') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const {
+    isOnline,
+    justCameOnline,
+    pendingCount,
+    isSyncing,
+    triggerSync,
+  } = useOfflineSync(user?.id, (syncedCount) => {
+    playSuccessChime();
+    setSyncToast({
+      title: 'Změny synchronizovány',
+      message: `${syncedCount} ${syncedCount === 1 ? 'změna byla synchronizována' : syncedCount < 5 ? 'změny byly synchronizovány' : 'změn bylo synchronizováno'} do cloudu.`,
+    });
+    if (user?.id) {
+      fetchNotesFromCloud(user.id).then((cloudNotes) => {
+        if (cloudNotes && cloudNotes.length > 0) setNotes(cloudNotes);
+      });
     }
   });
 
@@ -198,22 +226,38 @@ export const App: React.FC = () => {
     // Optimistic local update
     setNotes((prev) => [newNote, ...prev]);
 
+    if (!isOnline || !user?.id) {
+      if (user?.id) {
+        enqueueOfflineAction({ type: 'CREATE_NOTE', note: newNote, userId: user.id });
+      }
+      return;
+    }
+
     // Async sync to Supabase with user_id if logged in
     try {
-      const saved = await saveNoteToCloud(newNote, user?.id);
+      const saved = await saveNoteToCloud(newNote, user.id);
       setNotes((prev) => prev.map((n) => (n.id === newNote.id ? saved : n)));
     } catch (err) {
-      console.error('Failed to sync new note with Supabase:', err);
+      console.warn('Failed to sync new note with Supabase, queuing offline:', err);
+      enqueueOfflineAction({ type: 'CREATE_NOTE', note: newNote, userId: user.id });
     }
   };
 
   // Handle note deletion
   const handleDeleteNote = async (noteId: string) => {
     setNotes((prev) => prev.filter((n) => n.id !== noteId));
+    if (!isOnline || !user?.id) {
+      if (user?.id) {
+        enqueueOfflineAction({ type: 'DELETE_NOTE', noteId });
+      }
+      return;
+    }
+
     try {
       await deleteNoteFromCloud(noteId);
     } catch (err) {
-      console.error('Failed to delete note from Supabase:', err);
+      console.warn('Failed to delete note from Supabase, queuing offline:', err);
+      enqueueOfflineAction({ type: 'DELETE_NOTE', noteId });
     }
   };
 
@@ -223,10 +267,18 @@ export const App: React.FC = () => {
     setNotes((prev) => prev.map((n) => (n.id === noteId ? { ...n, ...updates } : n)));
     setSelectedNote((curr) => (curr?.id === noteId ? { ...curr, ...updates } : curr));
 
+    if (!isOnline || !user?.id) {
+      if (user?.id) {
+        enqueueOfflineAction({ type: 'UPDATE_NOTE', noteId, updates });
+      }
+      return;
+    }
+
     try {
       await updateNoteInCloud(noteId, updates);
     } catch (err) {
-      console.error('Failed to update note in Supabase:', err);
+      console.warn('Failed to update note in Supabase, queuing offline:', err);
+      enqueueOfflineAction({ type: 'UPDATE_NOTE', noteId, updates });
     }
   };
 
@@ -264,9 +316,12 @@ export const App: React.FC = () => {
     setUser(null);
     setUserProfile(null);
     setUnconfirmedEmail(null);
+    setIsGuestMode(false);
     try {
       localStorage.removeItem('flexnote_unconfirmed_email');
+      localStorage.removeItem('flexnote_guest_mode');
     } catch {}
+    setActiveTab('notes');
   };
 
   // Set pending unconfirmed email state
@@ -299,20 +354,34 @@ export const App: React.FC = () => {
           onCheckVerified={handleCheckVerified}
           onSignOut={handleSignOut}
         />
-      ) : !user ? (
+      ) : !user && !isGuestMode ? (
         <AuthScreen
           onSuccess={() => {}}
           onRequiresConfirmation={handleRequiresConfirmation}
+          onContinueOffline={() => {
+            try {
+              localStorage.setItem('flexnote_guest_mode', 'true');
+            } catch {}
+            setIsGuestMode(true);
+          }}
         />
       ) : (
         <>
-          {/* Top Header with App Title on left, Class Switcher Dropdown on right, and Realtime sync indicator */}
+          {/* Top Header with App Title on left and Class Switcher Dropdown on right */}
           <TopHeader
             subjects={SUBJECTS}
             selectedSubject={selectedSubject}
             onSelectSubject={(subj) => setSelectedSubject(subj)}
             totalNotes={notes.length}
-            isRealtimeConnected={isRealtimeConnected}
+          />
+
+          {/* Clean, flat offline status banner strip (strictly no pill shapes) */}
+          <OfflineBanner
+            isOnline={isOnline}
+            justCameOnline={justCameOnline}
+            pendingCount={pendingCount}
+            isSyncing={isSyncing}
+            onSyncNow={triggerSync}
           />
 
           {/* Main Content Area */}
@@ -326,30 +395,23 @@ export const App: React.FC = () => {
                   selectedSubjectName={activeMeta.name}
                   onSelectNote={(note) => setSelectedNote(note)}
                   onOpenScan={() => setScanModalOpen(true)}
+                  onOpenExport={() => setExportModalOpen(true)}
                 />
               </div>
             )}
 
-            {activeTab === 'search' && (
-              <NotesLibraryView
-                notes={notes}
-                subjects={SUBJECTS}
-                selectedSubject={selectedSubject}
-                onSelectSubject={setSelectedSubject}
-                onSelectNote={(note) => setSelectedNote(note)}
-                onOpenScan={() => setScanModalOpen(true)}
-                onOpenExport={() => setExportModalOpen(true)}
-              />
-            )}
-
             {activeTab === 'profile' && (
               <ProfileView
-                user={user}
+                user={user || { id: 'guest', email: 'Místní offline sešit' }}
                 profile={userProfile}
                 totalNotes={notes.length}
                 onSignOut={handleSignOut}
                 onUpdateProfile={(updated) => setUserProfile(updated)}
                 onOpenExport={() => setExportModalOpen(true)}
+                isOnline={isOnline}
+                pendingSyncCount={pendingCount}
+                isSyncing={isSyncing}
+                onSyncNow={triggerSync}
               />
             )}
           </main>

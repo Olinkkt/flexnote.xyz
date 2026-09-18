@@ -16,6 +16,11 @@ import {
   XCircle,
   Download,
   ChevronRight,
+  Wifi,
+  WifiOff,
+  Smartphone,
+  HardDrive,
+  RefreshCw,
 } from 'lucide-react';
 import { UserProfile, signOutUser, updateUserProfile, checkUsernameAvailability } from '../services/supabase';
 import { playPopSound, playSuccessChime } from '../utils/audio';
@@ -27,6 +32,10 @@ interface ProfileViewProps {
   onSignOut: () => void;
   onUpdateProfile?: (updated: UserProfile) => void;
   onOpenExport?: () => void;
+  isOnline?: boolean;
+  pendingSyncCount?: number;
+  isSyncing?: boolean;
+  onSyncNow?: () => void;
 }
 
 const GRADE_CATEGORIES = [
@@ -53,8 +62,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onSignOut,
   onUpdateProfile,
   onOpenExport,
+  isOnline = true,
+  pendingSyncCount = 0,
+  isSyncing = false,
+  onSyncNow,
 }) => {
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [showPwaGuide, setShowPwaGuide] = useState(false);
   const [fullName, setFullName] = useState(profile?.full_name || '');
   const [username, setUsername] = useState(profile?.username || '');
   const [school, setSchool] = useState(profile?.school || '');
@@ -269,17 +283,137 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
       </div>
 
-      {/* Cloud Sync Status Card */}
-      <div className="duo-card p-3.5 bg-white flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-eagerGreen animate-pulse"></span>
-          <span className="font-feather font-black text-xs text-duoGray-charcoal">
-            Cloudová synchronizace
+      {/* Network & Cloud Status Card (Strictly no pill shapes) */}
+      <div className="duo-card p-3.5 bg-white flex flex-col gap-2.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            {isOnline ? (
+              <div className="w-8 h-8 rounded-xl bg-storybookGreen text-eagerGreen flex items-center justify-center shrink-0">
+                <Wifi size={17} className="stroke-[2.5]" />
+              </div>
+            ) : (
+              <div className="w-8 h-8 rounded-xl bg-[#fffbeb] text-[#d97706] flex items-center justify-center shrink-0">
+                <WifiOff size={17} className="stroke-[2.5]" />
+              </div>
+            )}
+            <div>
+              <div className="font-feather font-black text-xs text-duoGray-charcoal">
+                {isOnline ? 'Cloudová synchronizace' : 'Režim offline'}
+              </div>
+              <p className="text-[11px] font-bold text-duoGray-pencil">
+                {isOnline
+                  ? 'Aktivní připojení k serveru'
+                  : 'Změny se ukládají lokálně do zařízení'}
+              </p>
+            </div>
+          </div>
+          <span
+            className={`text-[11px] font-feather font-black px-2.5 py-1 rounded-md border ${
+              isOnline
+                ? 'text-eagerGreen bg-storybookGreen/60 border-eagerGreen/30'
+                : 'text-[#b45309] bg-[#fef3c7] border-[#fcd34d]'
+            }`}
+          >
+            {isOnline ? 'Online' : 'Offline'}
           </span>
         </div>
-        <span className="text-[11px] font-feather font-black text-eagerGreen bg-storybookGreen px-2 py-0.5 rounded-full border border-eagerGreen/30">
-          Online
+
+        {/* Pending Sync Queue Action if changes are queued */}
+        {pendingSyncCount > 0 && (
+          <div className="pt-2 border-t border-gray-100 flex items-center justify-between">
+            <span className="text-[11px] font-bold text-[#b45309]">
+              {pendingSyncCount} {pendingSyncCount === 1 ? 'změna čeká' : 'změn čeká'} na synchronizaci
+            </span>
+            {isOnline && onSyncNow && (
+              <button
+                onClick={() => {
+                  playPopSound();
+                  onSyncNow();
+                }}
+                disabled={isSyncing}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-eagerGreen hover:bg-eagerGreen-dark text-white text-xs font-feather font-black uppercase tracking-wider cursor-pointer shadow-xs disabled:opacity-50"
+              >
+                <RefreshCw size={12} className={isSyncing ? 'animate-spin' : ''} />
+                <span>{isSyncing ? 'Synchronizuji...' : 'Synchronizovat'}</span>
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Offline Storage Card */}
+      <div className="duo-card p-3.5 bg-white flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-gray-100 text-duoGray-charcoal flex items-center justify-center shrink-0">
+            <HardDrive size={17} className="stroke-[2.5]" />
+          </div>
+          <div>
+            <div className="font-feather font-black text-xs text-duoGray-charcoal">
+              Offline úložiště v zařízení
+            </div>
+            <p className="text-[11px] font-bold text-duoGray-pencil">
+              {totalNotes} {totalNotes === 1 ? 'zápisek' : totalNotes < 5 ? 'zápisky' : 'zápisků'} připraveno bez internetu
+            </p>
+          </div>
+        </div>
+        <span className="text-[11px] font-feather font-black text-duoGray-charcoal bg-gray-100 px-2 py-1 rounded-md border border-gray-200">
+          Uloženo
         </span>
+      </div>
+
+      {/* PWA Mobile App Card */}
+      <div className="duo-card p-3.5 bg-white">
+        <button
+          onClick={() => {
+            playPopSound();
+            setShowPwaGuide(!showPwaGuide);
+          }}
+          className="w-full flex items-center justify-between cursor-pointer text-left group"
+        >
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-sparkBlue-tint text-sparkBlue flex items-center justify-center shrink-0">
+              <Smartphone size={17} className="stroke-[2.5]" />
+            </div>
+            <div>
+              <div className="font-feather font-black text-xs text-duoGray-charcoal">
+                Aplikace na plochu telefonu
+              </div>
+              <p className="text-[11px] font-bold text-duoGray-pencil">
+                Jak používat Flexnote bez prohlížeče
+              </p>
+            </div>
+          </div>
+          <ChevronRight
+            size={18}
+            className={`text-duoGray-pencil transition-transform duration-150 ${
+              showPwaGuide ? 'rotate-90 text-sparkBlue' : 'group-hover:translate-x-0.5'
+            }`}
+          />
+        </button>
+
+        {showPwaGuide && (
+          <div className="mt-3 pt-3 border-t border-gray-100 space-y-2 text-xs text-duoGray-charcoal font-medium animate-in fade-in">
+            <div className="p-2.5 rounded-xl bg-gray-50 border border-duoGray-border">
+              <div className="font-feather font-black text-[11px] text-duoGray-charcoal uppercase tracking-wider mb-1">
+                🍏 iPhone & iPad (Safari)
+              </div>
+              <p className="text-[11px] text-duoGray-pencil leading-relaxed">
+                V dolní liště Safari klepni na tlačítko <strong>Sdílet</strong> (čtvereček se šipkou nahoru) a vyber <strong>„Přidat na plochu“</strong>.
+              </p>
+            </div>
+            <div className="p-2.5 rounded-xl bg-gray-50 border border-duoGray-border">
+              <div className="font-feather font-black text-[11px] text-duoGray-charcoal uppercase tracking-wider mb-1">
+                🤖 Android (Chrome)
+              </div>
+              <p className="text-[11px] text-duoGray-pencil leading-relaxed">
+                V menu vpravo nahoře (tři tečky) zvol <strong>„Instalovat aplikaci“</strong> nebo <strong>„Přidat na plochu“</strong>.
+              </p>
+            </div>
+            <p className="text-[10px] text-duoGray-faded italic pt-0.5">
+              Po přidání se Flexnote spouští na celou obrazovku a funguje 100% offline i v letovém režimu ve škole.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Export All Notes Card */}

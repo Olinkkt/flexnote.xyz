@@ -9,7 +9,6 @@ interface TopHeaderProps {
   selectedSubject: SubjectType;
   onSelectSubject: (subject: SubjectType) => void;
   totalNotes: number;
-  isRealtimeConnected?: boolean;
 }
 
 export const TopHeader: React.FC<TopHeaderProps> = ({
@@ -17,7 +16,6 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   selectedSubject,
   onSelectSubject,
   totalNotes,
-  isRealtimeConnected = false,
 }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
@@ -41,19 +39,10 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             <h1 className="font-feather font-black text-[20px] text-duoGray-charcoal leading-none">
               Flexnote
             </h1>
-            <div className="flex items-center gap-1.5 mt-0.5">
+            <div className="mt-0.5">
               <span className="text-[11px] font-bold text-duoGray-pencil">
                 {totalNotes} {totalNotes === 1 ? 'zápisek' : totalNotes < 5 ? 'zápisky' : 'zápisků'}
               </span>
-              {isRealtimeConnected && (
-                <span
-                  title="Živé cloudové propojení (Supabase Realtime aktivní)"
-                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-storybookGreen/70 border border-eagerGreen/40 text-[9px] font-feather font-black text-eagerGreen-dark tracking-wide animate-in fade-in"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-eagerGreen animate-pulse" />
-                  Živě
-                </span>
-              )}
             </div>
           </div>
         </div>

@@ -6,9 +6,14 @@ import { signInWithEmail, signUpWithEmail, signInWithGoogle } from '../services/
 interface AuthScreenProps {
   onSuccess?: () => void;
   onRequiresConfirmation?: (email: string) => void;
+  onContinueOffline?: () => void;
 }
 
-export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onRequiresConfirmation }) => {
+export const AuthScreen: React.FC<AuthScreenProps> = ({
+  onSuccess,
+  onRequiresConfirmation,
+  onContinueOffline,
+}) => {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -293,6 +298,22 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onSuccess, onRequiresCon
               </svg>
               <span>Pokračovat přes Google</span>
             </button>
+
+            {/* Offline continuation / Guest access for students */}
+            {onContinueOffline && (
+              <button
+                type="button"
+                onClick={() => {
+                  playPopSound();
+                  onContinueOffline();
+                }}
+                className="w-full pt-2 pb-1 text-xs font-feather font-extrabold text-duoGray-pencil hover:text-duoGray-charcoal hover:underline transition cursor-pointer text-center"
+              >
+                {typeof navigator !== 'undefined' && !navigator.onLine
+                  ? '📡 Jsi offline — Otevřít místní sešit'
+                  : 'Používat offline bez přihlášení (Místní sešit)'}
+              </button>
+            )}
           </form>
         )}
       </div>

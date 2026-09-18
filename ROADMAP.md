@@ -36,6 +36,25 @@ Cíl: Přeměnit aplikaci na plně funkční cloudovou platformu se živým zpra
 
 ---
 
+## 📶 Verze 2.5: 100% Offline-First & PWA pro studenty (Hotovo ✅)
+Cíl: Zaručit, že každý student má okamžitý a plný přístup ke všem svým zápiskům, vzorcům a materiálům i bez připojení k internetu přímo ve třídě, v metru nebo v režimu letadlo.
+
+1. **Service Worker & PWA instalace**:
+   - Plné cachování aplikace (`public/sw.js`) — HTML, skripty, styly, KaTeX fonty i Google Fonts.
+   - Možnost instalace na plochu telefonu (iOS „Přidat na plochu“, Android „Instalovat aplikaci“) bez nutnosti otevírat prohlížeč.
+2. **Offline-First architektura zápisků**:
+   - Všechny zápisky bezpečně uložené v lokální mezipaměti zařízení.
+   - Rychlé čtení, vyhledávání, filtrace i KaTeX matematické vzorce plně funkční bez internetu.
+   - Možnost vstoupit do aplikace offline jako host bez nutnosti okamžitého přihlašování.
+3. **Offline fronta změn (Sync Queue)**:
+   - Lokální zaznamenávání vytvořených, upravených nebo smazaných zápisků v offline režimu.
+   - Automatická synchronizace do cloudu Supabase ihned po obnovení internetového připojení.
+4. **Diskrétní offline status & indikátory**:
+   - Plochá, čistá notifikační lišta (žádné oválné pilulky) informující o offline režimu a počtu čekajících změn.
+   - Přehled stavu offline úložiště a návod na instalaci v záložce Profil.
+
+---
+
 ## 📚 Verze 3: Aktivní studium & Testování (Flashcards & Practice)
 Cíl: Umožnit studentům efektivně se učit přímo z jejich zdigitalizovaných zápisků.
 

@@ -1,5 +1,5 @@
-import React from 'react';
-import { Clock, ChevronRight, BookOpen, Plus } from 'lucide-react';
+import React, { useState } from 'react';
+import { Clock, ChevronRight, BookOpen, Search, X, Download } from 'lucide-react';
 import { NoteItem, SubjectMeta } from '../types/notes';
 import { playPopSound } from '../utils/audio';
 import { SubjectIcon } from './SubjectIcon';
@@ -10,6 +10,7 @@ interface RecentNotesListProps {
   selectedSubjectName: string;
   onSelectNote: (note: NoteItem) => void;
   onOpenScan: () => void;
+  onOpenExport?: () => void;
 }
 
 export const RecentNotesList: React.FC<RecentNotesListProps> = ({
@@ -18,34 +19,76 @@ export const RecentNotesList: React.FC<RecentNotesListProps> = ({
   selectedSubjectName,
   onSelectNote,
   onOpenScan,
+  onOpenExport,
 }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+
   const getSubjectMeta = (subjectId: string) => {
     return subjects.find(s => s.id === subjectId) || subjects[0];
   };
 
+  const filteredNotes = notes.filter((n) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      n.title.toLowerCase().includes(q) ||
+      n.summary.toLowerCase().includes(q) ||
+      (n.markdown && n.markdown.toLowerCase().includes(q)) ||
+      (n.tags && n.tags.some(t => t.toLowerCase().includes(q)))
+    );
+  });
+
   return (
-    <div className="px-4 py-4">
+    <div className="px-4 py-3 select-none">
       {/* Section Header */}
-      <div className="flex items-center justify-between mb-3">
-        <div>
-          <h2 className="font-feather font-black text-[18px] text-duoGray-charcoal leading-tight">
-            Poslední zápisky
-          </h2>
-          <p className="text-[12px] font-bold text-duoGray-pencil">
-            {selectedSubjectName} • {notes.length} {notes.length === 1 ? 'položka' : 'položek'}
-          </p>
+      <div className="mb-3">
+        <h2 className="font-feather font-black text-[20px] text-duoGray-charcoal leading-tight">
+          {searchQuery.trim() ? 'Výsledky hledání' : 'Poslední zápisky'}
+        </h2>
+        <p className="text-[12px] font-bold text-duoGray-pencil mt-0.5">
+          {searchQuery.trim()
+            ? `Nalezeno ${filteredNotes.length} ${filteredNotes.length === 1 ? 'zápisek' : filteredNotes.length < 5 ? 'zápisky' : 'zápisků'}`
+            : `${selectedSubjectName} • ${notes.length} ${notes.length === 1 ? 'položka' : notes.length < 5 ? 'položky' : 'položek'}`}
+        </p>
+      </div>
+
+      {/* Search Input Bar & Export Action Button */}
+      <div className="flex items-center gap-2 mb-4">
+        <div className="relative flex-1">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-duoGray-faded" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Hledat v zápiscích, vzorcích a tématech..."
+            className="w-full pl-9 pr-8 py-2.5 rounded-2xl bg-white border-2 border-duoGray-border focus:border-sparkBlue focus:outline-hidden text-xs font-bold text-duoGray-charcoal placeholder:text-duoGray-faded shadow-xs transition-colors"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => {
+                playPopSound();
+                setSearchQuery('');
+              }}
+              title="Vymazat hledání"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-duoGray-faded hover:text-duoGray-charcoal cursor-pointer"
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
 
-        <button
-          onClick={() => {
-            playPopSound();
-            onOpenScan();
-          }}
-          className="text-xs font-feather font-black text-sparkBlue hover:underline flex items-center gap-1 cursor-pointer"
-        >
-          <Plus size={14} className="stroke-[3]" />
-          <span>Přidat</span>
-        </button>
+        {onOpenExport && (
+          <button
+            onClick={() => {
+              playPopSound();
+              onOpenExport();
+            }}
+            title="Exportovat všechny zápisky"
+            className="p-2.5 rounded-2xl bg-white border-2 border-duoGray-border hover:border-sparkBlue hover:bg-sparkBlue-tint text-duoGray-charcoal hover:text-sparkBlue active:scale-95 transition shadow-xs shrink-0 cursor-pointer"
+          >
+            <Download size={18} />
+          </button>
+        )}
       </div>
 
       {notes.length === 0 ? (
@@ -69,9 +112,30 @@ export const RecentNotesList: React.FC<RecentNotesListProps> = ({
             Vyfotit první zápisek
           </button>
         </div>
+      ) : filteredNotes.length === 0 ? (
+        <div className="duo-card p-8 text-center bg-white">
+          <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-3 text-duoGray-pencil">
+            <Search size={24} />
+          </div>
+          <h3 className="font-feather font-black text-sm text-duoGray-charcoal mb-1">
+            Nenalezen žádný zápisek
+          </h3>
+          <p className="text-xs text-duoGray-pencil mb-4 max-w-[240px] mx-auto">
+            Pro dotaz „{searchQuery}“ jsme nic nenašli. Zkus jiné klíčové slovo nebo vzorec.
+          </p>
+          <button
+            onClick={() => {
+              playPopSound();
+              setSearchQuery('');
+            }}
+            className="duo-btn duo-btn-white py-2 px-4 text-xs font-feather font-black text-duoGray-charcoal border-2 border-duoGray-border"
+          >
+            Zrušit hledání
+          </button>
+        </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {notes.map((note) => {
+          {filteredNotes.map((note) => {
             const meta = getSubjectMeta(note.subject);
             return (
               <div

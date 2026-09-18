@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Camera, X, Loader2, Sparkles, FileText, ArrowRight, HelpCircle, ChevronRight, Check, Zap } from 'lucide-react';
+import { Camera, X, Loader2, Sparkles, FileText, ArrowRight, HelpCircle, ChevronRight, Check, Zap, WifiOff } from 'lucide-react';
 import { NoteItem, SubjectType } from '../types/notes';
 import { playPopSound, playSuccessChime } from '../utils/audio';
 import { SubjectIcon } from './SubjectIcon';
@@ -46,14 +46,30 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote, userI
     if (!file) return;
 
     setSelectedFile(file);
-    setStatus('processing');
-    setProcessingMessage('Model Dots3-Note analyzuje sešit...');
     playPopSound();
+
+    const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
 
     try {
       const base64 = await fileToBase64(file);
       setPreviewImage(base64);
 
+      if (!isOnline) {
+        // Offline: save photo locally and allow immediate saving/naming without AI API
+        setIsAiUncertain(true);
+        setSelectedSubject(null);
+        setExtractedData({
+          title: 'Nový zápisek ze sešitu',
+          summary: 'Zápisek vyfocený offline v režimu bez internetu.',
+          markdown: `# Nový zápisek ze sešitu\n\n*(Vyfoceno offline v režimu bez internetu. Text můžeš upravit v detailu zápisku.)*`,
+        });
+        setStatus('ready');
+        playSuccessChime();
+        return;
+      }
+
+      setStatus('processing');
+      setProcessingMessage('Model Dots3-Note analyzuje sešit...');
       setProcessingMessage('Dots3-Note čte text a převádí vzorce do KaTeXu...');
       const result = await extractNoteFromImage(base64);
 
@@ -118,8 +134,8 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote, userI
 
     let finalThumbnailUrl = previewImage;
 
-    // If student selected or took a real photo, upload to Supabase Storage
-    if (selectedFile) {
+    // If student selected or took a real photo and is online, upload to Supabase Storage
+    if (selectedFile && (typeof navigator === 'undefined' || navigator.onLine)) {
       setIsUploadingImage(true);
       try {
         const publicUrl = await uploadNoteImage(selectedFile, userId);
@@ -182,6 +198,19 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote, userI
         <div className="p-4 overflow-y-auto max-h-[75vh]">
           {status === 'idle' && (
             <div className="flex flex-col items-center text-center">
+              {/* Offline mode informational note */}
+              {typeof navigator !== 'undefined' && !navigator.onLine && (
+                <div className="w-full bg-[#fffbeb] border-2 border-[#fcd34d] rounded-2xl p-3 mb-3 text-left animate-in fade-in duration-150">
+                  <div className="flex items-center gap-1.5 font-feather font-black text-xs text-[#92400e]">
+                    <WifiOff size={14} className="stroke-[2.5]" />
+                    <span>Režim offline</span>
+                  </div>
+                  <p className="text-[11px] text-[#b45309] font-medium mt-0.5 leading-snug">
+                    Fotka se uloží přímo do tvého zařízení. Zápisek můžeš pojmenovat a uložit do sešitu i bez internetu.
+                  </p>
+                </div>
+              )}
+
               {/* Main Fast Import Button */}
               <label className="w-full duo-card p-6 flex flex-col items-center justify-center cursor-pointer hover:border-eagerGreen bg-[#f9fafb] group transition-all mb-3">
                 <input

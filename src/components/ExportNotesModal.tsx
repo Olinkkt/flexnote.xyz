@@ -7,7 +7,6 @@ import {
   FileText,
   Loader2,
   ExternalLink,
-  Copy,
   Check,
   Sparkles,
   Info,
@@ -41,7 +40,6 @@ export const ExportNotesModal: React.FC<ExportNotesModalProps> = ({
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [needsConfigNotice, setNeedsConfigNotice] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   const totalNotes = notes.length;
   const targetEmail = userEmail || profile?.email || '';
@@ -88,15 +86,6 @@ export const ExportNotesModal: React.FC<ExportNotesModalProps> = ({
     } finally {
       setSendingEmail(false);
     }
-  };
-
-  const handleCopyMarkdown = () => {
-    playPopSound();
-    const markdown = generateAllNotesMarkdown(notes, profile, targetEmail);
-    navigator.clipboard.writeText(markdown);
-    setCopied(true);
-    onShowToast?.('Zkopírováno', 'Kompletní Markdown zápisků byl zkopírován do schránky.');
-    setTimeout(() => setCopied(false), 2500);
   };
 
   const handleOpenMailto = () => {
@@ -252,24 +241,6 @@ export const ExportNotesModal: React.FC<ExportNotesModalProps> = ({
               </div>
             )}
           </div>
-
-          {/* Quick Copy Action */}
-          <button
-            onClick={handleCopyMarkdown}
-            className="w-full py-2.5 px-3 rounded-xl border-2 border-dashed border-duoGray-border hover:border-duoGray-faded text-duoGray-pencil hover:text-duoGray-charcoal text-xs font-feather font-extrabold flex items-center justify-center gap-1.5 transition cursor-pointer"
-          >
-            {copied ? (
-              <>
-                <Check size={14} className="text-eagerGreen stroke-[3]" />
-                <span className="text-eagerGreen">Text zkopírován do schránky!</span>
-              </>
-            ) : (
-              <>
-                <Copy size={14} />
-                <span>Zkopírovat celý text do schránky</span>
-              </>
-            )}
-          </button>
         </div>
       </div>
     </div>
