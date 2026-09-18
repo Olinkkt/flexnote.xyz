@@ -21,6 +21,49 @@ export interface FlashcardItem {
   hint?: string;
 }
 
+export type QuizQuestionType = 'multiple-choice' | 'fill-in' | 'matching';
+
+export interface MultipleChoiceQuestion {
+  id: string;
+  type: 'multiple-choice';
+  question: string;
+  options: string[];
+  correctIndex: number;
+  explanation?: string;
+}
+
+export interface FillInQuestion {
+  id: string;
+  type: 'fill-in';
+  sentenceBefore: string;
+  blankAnswer: string;
+  sentenceAfter: string;
+  options?: string[];
+  explanation?: string;
+}
+
+export interface MatchingPair {
+  id: string;
+  left: string;
+  right: string;
+}
+
+export interface MatchingQuestion {
+  id: string;
+  type: 'matching';
+  instruction: string;
+  pairs: MatchingPair[];
+  explanation?: string;
+}
+
+export type QuizQuestion = MultipleChoiceQuestion | FillInQuestion | MatchingQuestion;
+
+export interface QuizData {
+  questions: QuizQuestion[];
+  bestScore?: number;
+  lastAttemptAt?: number;
+}
+
 export interface NoteItem {
   id: string;
   title: string;
@@ -36,6 +79,7 @@ export interface NoteItem {
   summary: string;
   keyFormulas?: string[];
   flashcards?: FlashcardItem[];
+  quiz?: QuizData;
 }
 
 export interface LearningNode {

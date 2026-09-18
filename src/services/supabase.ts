@@ -43,6 +43,19 @@ export function mapRowToNoteItem(row: any): NoteItem {
     }
   }
 
+  let parsedQuiz = undefined;
+  if (row.quiz_data) {
+    if (typeof row.quiz_data === 'object') {
+      parsedQuiz = row.quiz_data;
+    } else if (typeof row.quiz_data === 'string') {
+      try {
+        parsedQuiz = JSON.parse(row.quiz_data);
+      } catch {
+        parsedQuiz = undefined;
+      }
+    }
+  }
+
   return {
     id: row.id,
     title: row.title,
@@ -66,6 +79,7 @@ export function mapRowToNoteItem(row: any): NoteItem {
     tags: row.tags || [row.subject || 'Zápisky'],
     markdown: row.markdown,
     flashcards: parsedFlashcards,
+    quiz: parsedQuiz,
   };
 }
 
@@ -84,6 +98,7 @@ export async function saveNoteToCloud(note: NoteItem, userId?: string): Promise<
       reading_time: note.readingTime,
       tags: note.tags,
       flashcards: (note.flashcards || []) as any,
+      quiz_data: (note.quiz || null) as any,
       user_id: userId || null,
     })
     .select()
@@ -102,7 +117,7 @@ export async function saveNoteToCloud(note: NoteItem, userId?: string): Promise<
  */
 export async function updateNoteInCloud(
   noteId: string,
-  updates: Partial<Pick<NoteItem, 'title' | 'markdown' | 'summary' | 'subject' | 'flashcards'>>
+  updates: Partial<Pick<NoteItem, 'title' | 'markdown' | 'summary' | 'subject' | 'flashcards' | 'quiz'>>
 ): Promise<NoteItem> {
   const dbUpdates: Database['public']['Tables']['notes']['Update'] = {
     updated_at: new Date().toISOString(),
@@ -112,6 +127,7 @@ export async function updateNoteInCloud(
   if (updates.summary !== undefined) dbUpdates.summary = updates.summary;
   if (updates.subject !== undefined) dbUpdates.subject = updates.subject;
   if (updates.flashcards !== undefined) dbUpdates.flashcards = updates.flashcards as any;
+  if (updates.quiz !== undefined) dbUpdates.quiz_data = updates.quiz as any;
 
   const { data, error } = await supabase
     .from('notes')

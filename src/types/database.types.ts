@@ -18,6 +18,7 @@ export type Database = {
           flashcards: Json | null
           id: string
           markdown: string
+          quiz_data: Json | null
           reading_time: string | null
           subject: string
           summary: string | null
@@ -32,6 +33,7 @@ export type Database = {
           flashcards?: Json | null
           id?: string
           markdown: string
+          quiz_data?: Json | null
           reading_time?: string | null
           subject: string
           summary?: string | null
@@ -46,6 +48,7 @@ export type Database = {
           flashcards?: Json | null
           id?: string
           markdown?: string
+          quiz_data?: Json | null
           reading_time?: string | null
           subject?: string
           summary?: string | null

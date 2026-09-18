@@ -412,6 +412,9 @@ export const App: React.FC = () => {
                 onUpdateFlashcards={async (noteId, flashcards) => {
                   await handleUpdateNote(noteId, { flashcards });
                 }}
+                onUpdateQuiz={async (noteId, quiz) => {
+                  await handleUpdateNote(noteId, { quiz });
+                }}
                 onOpenScan={() => setScanModalOpen(true)}
               />
             )}
