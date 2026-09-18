@@ -59,6 +59,7 @@ export function mapRowToNoteItem(row: any): NoteItem {
   return {
     id: row.id,
     title: row.title,
+    topic: row.topic || undefined,
     subject: (row.subject as SubjectType) || 'czech',
     date: row.created_at
       ? new Date(row.created_at).toLocaleDateString('cs-CZ', {
@@ -91,6 +92,7 @@ export async function saveNoteToCloud(note: NoteItem, userId?: string): Promise<
     .from('notes')
     .insert({
       title: note.title,
+      topic: note.topic || null,
       subject: note.subject,
       markdown: note.markdown,
       summary: note.summary,
@@ -117,12 +119,13 @@ export async function saveNoteToCloud(note: NoteItem, userId?: string): Promise<
  */
 export async function updateNoteInCloud(
   noteId: string,
-  updates: Partial<Pick<NoteItem, 'title' | 'markdown' | 'summary' | 'subject' | 'flashcards' | 'quiz'>>
+  updates: Partial<Pick<NoteItem, 'title' | 'markdown' | 'summary' | 'subject' | 'flashcards' | 'quiz' | 'topic'>>
 ): Promise<NoteItem> {
   const dbUpdates: Database['public']['Tables']['notes']['Update'] = {
     updated_at: new Date().toISOString(),
   };
   if (updates.title !== undefined) dbUpdates.title = updates.title;
+  if (updates.topic !== undefined) dbUpdates.topic = updates.topic || null;
   if (updates.markdown !== undefined) dbUpdates.markdown = updates.markdown;
   if (updates.summary !== undefined) dbUpdates.summary = updates.summary;
   if (updates.subject !== undefined) dbUpdates.subject = updates.subject;

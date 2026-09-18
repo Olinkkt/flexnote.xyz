@@ -12,10 +12,12 @@ interface ScanModalProps {
   onClose: () => void;
   onSaveNote: (newNote: NoteItem) => void;
   userId?: string;
+  existingNotes?: NoteItem[];
 }
 
 interface ExtractedData {
   title: string;
+  topic?: string;
   summary: string;
   markdown: string;
 }
@@ -27,10 +29,11 @@ const AVAILABLE_CLASSES: { id: SubjectType; name: string }[] = [
   { id: 'science', name: 'Přírodní vědy' },
 ];
 
-export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote, userId }) => {
+export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote, userId, existingNotes }) => {
   const [status, setStatus] = useState<'idle' | 'processing' | 'ready'>('idle');
   const [processingMessage, setProcessingMessage] = useState('Model Dots3-Note čte text a KaTeX vzorce...');
   const [selectedSubject, setSelectedSubject] = useState<SubjectType | null>(null);
+  const [topic, setTopic] = useState<string>('');
   const [isAiUncertain, setIsAiUncertain] = useState<boolean>(false);
   const [previewImage, setPreviewImage] = useState<string>(
     'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=500&auto=format&fit=crop&q=80'
@@ -41,6 +44,15 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote, userI
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const relevantTopics = Array.from(
+    new Set(
+      (existingNotes || [])
+        .filter((n) => !selectedSubject || n.subject === selectedSubject)
+        .map((n) => n.topic)
+        .filter((t): t is string => Boolean(t && t.trim()))
+    )
+  );
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -76,9 +88,14 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote, userI
 
       setExtractedData({
         title: result.title,
+        topic: result.topic,
         summary: result.summary,
         markdown: result.markdown,
       });
+
+      if (result.topic) {
+        setTopic(result.topic);
+      }
 
       if (result.subject === 'uncertain') {
         setIsAiUncertain(true);
@@ -117,11 +134,14 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote, userI
         setIsAiUncertain(true);
         setSelectedSubject(null);
         setExtractedData(null);
+        setTopic('');
       } else {
         setIsAiUncertain(false);
         setSelectedSubject('maths');
+        setTopic('Goniometrie');
         setExtractedData({
           title: 'Goniometrie a pravoúhlý trojúhelník',
+          topic: 'Goniometrie',
           summary: 'Převedený zápisek z fotky sešitu do předmětu matematika.',
           markdown: `# Goniometrie a pravoúhlý trojúhelník\n\n## 1. Základní vztahy v trojúhelníku\n- $\\sin(\\alpha) = \\frac{a}{c}$\n- $\\cos(\\alpha) = \\frac{b}{c}$\n- $\\text{tg}(\\alpha) = \\frac{a}{b}$\n\n## 2. Pythagorova věta\n$$a^2 + b^2 = c^2$$`,
         });
@@ -160,6 +180,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote, userI
         : selectedSubject === 'history'
         ? 'Historický přehled panovníků'
         : 'Obecné zápisky z hodiny'),
+      topic: topic.trim() || undefined,
       subject: selectedSubject,
       date: 'Právě teď',
       timestamp: Date.now(),
@@ -168,7 +189,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote, userI
       accuracy: 98,
       status: 'new',
       summary: extractedData?.summary || `Převedený zápisek z fotky sešitu do předmětu ${selectedSubject}.`,
-      tags: [selectedSubject, 'Zápisky', 'Nový'],
+      tags: [selectedSubject, topic.trim() || 'Zápisky', 'Nový'],
       markdown: extractedData?.markdown || `# Zápisky z hodiny\n\n- Digitalizovaný text ze sešitu.\n- Předmět: **${AVAILABLE_CLASSES.find(c => c.id === selectedSubject)?.name || selectedSubject}**`,
     };
 
@@ -339,6 +360,46 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote, userI
                   </button>
                 </div>
               )}
+
+              {/* Topic / Chapter Input */}
+              <div className="duo-card p-3 mb-3 bg-white">
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-[11px] font-feather font-black uppercase tracking-wide text-duoGray-pencil">
+                    Téma / Kapitola sešitu
+                  </label>
+                  <span className="text-[10px] text-duoGray-faded font-bold">Spojí více stránek</span>
+                </div>
+                <input
+                  type="text"
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                  placeholder="Např. Kvadratické rovnice, Husitství..."
+                  className="w-full px-3 py-2 rounded-xl bg-gray-50 border-2 border-duoGray-border text-xs font-bold text-duoGray-charcoal focus:border-sparkBlue focus:bg-white focus:outline-hidden transition-all"
+                />
+
+                {relevantTopics.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                    <span className="text-[10px] font-bold text-duoGray-pencil">Témata:</span>
+                    {relevantTopics.slice(0, 4).map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => {
+                          playPopSound();
+                          setTopic(t);
+                        }}
+                        className={`text-[10px] font-feather font-extrabold px-2 py-0.5 rounded-lg border transition-all cursor-pointer ${
+                          topic.trim().toLowerCase() === t.toLowerCase()
+                            ? 'border-sparkBlue bg-sparkBlue/15 text-sparkBlue'
+                            : 'border-duoGray-border bg-gray-50 text-duoGray-pencil hover:text-duoGray-charcoal'
+                        }`}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               {/* Note Preview */}
               <div className="duo-card p-3 mb-4 bg-white">

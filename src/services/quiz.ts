@@ -207,3 +207,103 @@ DŮLEŽITÉ:
 
   return questions;
 }
+
+/**
+ * Generates a comprehensive practice test covering an entire topic (combining multiple note pages).
+ */
+export async function generateQuizForTopic(
+  topicName: string,
+  subject: string,
+  notes: NoteItem[]
+): Promise<QuizQuestion[]> {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    throw new Error('Pro vygenerování cvičného testu je vyžadováno připojení k internetu.');
+  }
+
+  const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
+  if (!apiKey || apiKey.trim() === '' || apiKey.includes('your_openrouter_api_key_here')) {
+    throw new Error('Chybí OpenRouter API klíč pro AI generování testu.');
+  }
+
+  const combinedContent = notes
+    .map((n, i) => `### Strana ${i + 1}: ${n.title}\n${n.markdown}`)
+    .join('\n\n---\n\n');
+
+  const systemPrompt = `Jsi expertní pedagogický asistent aplikace Flexnote pro studenty středních a základních škol.
+Tvým úkolem je vytvořit KOMPLEXNÍ souhrnný cvičný test (Comprehensive Practice Quiz) pro celé ucelené téma / kapitolu, které se skládá z ${notes.length} stránek zápisků.
+
+PRAVIDLA A TYPY OTÁZEK:
+Vytvoř 6 až 8 vysoce kvalitních otázek pokrývajících celé téma od základních definic po vzorce a praktické příklady.
+Zahrň následující 3 typy otázek:
+1. "multiple-choice" (výběr z možností A, B, C, D):
+   - "question": text otázky (může obsahovat KaTeX $...$ nebo $$...$$)
+   - "options": pole přesně 4 možností (žádná písmena A, B na začátku, jen čistý text/vzorec)
+   - "correctIndex": číslo 0, 1, 2 nebo 3
+   - "explanation": přátelské vysvětlení
+
+2. "fill-in" (doplňování chybějícího slova nebo vzorce):
+   - "sentenceBefore": text věty před doplňovaným výrazem
+   - "blankAnswer": přesný výraz, který student doplňuje (slovo, letopočet, nebo vzorec např. "$b^2 - 4ac$")
+   - "sentenceAfter": text věty za doplňovaným výrazem
+   - "options": pole 4 možností (jedna z nich je přesně blankAnswer, další 3 jsou věrohodné distraktory)
+   - "explanation": vysvětlení
+
+3. "matching" (spojování dvojic pojmů, vzorců nebo letopočtů):
+   - "instruction": zadání (např. "Spoj pojmy s jejich definicí:")
+   - "pairs": pole 3 až 4 dvojic ve tvaru:
+     [
+       { "id": "p1", "left": "Pojem 1", "right": "Vysvětlení 1" },
+       { "id": "p2", "left": "Pojem 2", "right": "Vysvětlení 2" },
+       { "id": "p3", "left": "Pojem 3", "right": "Vysvětlení 3" }
+     ]
+   - "explanation": vysvětlení
+
+DŮLEŽITÉ:
+- Všechny matematické, chemické či fyzikální výrazy a rovnice VŽDY uzavři do KaTeX syntaxe ($...$ nebo $$...$$).
+- Otázky musí testovat znalosti napříč všemi ${notes.length} stránkami zápisků.
+- Vrať VÝHRADNĚ validní JSON pole bez jakéhokoliv dalšího textu okolo.`;
+
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey.trim()}`,
+      'HTTP-Referer': 'https://flexnote.xyz',
+      'X-Title': 'Flexnote',
+    },
+    body: JSON.stringify({
+      model: 'google/gemini-2.0-flash-exp:free',
+      messages: [
+        {
+          role: 'system',
+          content: systemPrompt,
+        },
+        {
+          role: 'user',
+          content: `Vytvoř souhrnný cvičný test pro celou kapitolu / téma:\n\nTéma: ${topicName}\nPředmět: ${subject}\nPočet stránek sešitu: ${notes.length}\n\nObsah všech stránek tématu:\n${combinedContent}`,
+        },
+      ],
+      temperature: 0.3,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => '');
+    throw new Error(`Generování testu z tématu selhalo (kód ${response.status}): ${errorText || response.statusText}`);
+  }
+
+  const data = await response.json();
+  const rawContent = data.choices?.[0]?.message?.content;
+
+  if (!rawContent) {
+    throw new Error('AI nevrátila žádný obsah testu.');
+  }
+
+  const questions = parseQuizOutput(rawContent);
+  if (questions.length === 0) {
+    throw new Error('Nepodařilo se zpracovat test pro téma. Zkuste to prosím znovu.');
+  }
+
+  return questions;
+}
+

@@ -2,6 +2,7 @@ import { SubjectType } from '../types/notes';
 
 export interface ExtractedNoteResult {
   title: string;
+  topic?: string;
   subject: SubjectType | 'uncertain';
   summary: string;
   markdown: string;
@@ -63,16 +64,19 @@ Pravidla přepisu a formátování:
    - Používej nadpisy (# Hlavní téma, ## Podtémata).
    - Důležité definice a poučky vlož do citace: > **Důležité:** ... (vytvoří přehledný zvýrazněný rámeček).
    - Pokud jsou v sešitě srovnání, slovíčka nebo časové osy, zformátuj je do Markdown tabulky (| ... |).
-4. KLASIFIKACE PŘEDMĚTU:
-   - "maths" (matematika, geometrie)
-   - "czech" (čeština, literatura, mluvnice)
-   - "history" (dějepis, dějiny)
-   - "science" (fyzika, chemie, biologie, zeměpis)
-   - "uncertain" (pokud je text nejednoznačný nebo je ho příliš málo)
+4. KLASIFIKACE PŘEDMĚTU A TÉMATU:
+   - Identifikuj širší studijní téma/kapitolu (např. "Kvadratické rovnice", "Druhá světová válka", "Fotosyntéza").
+   - Předmět:
+     - "maths" (matematika, geometrie)
+     - "czech" (čeština, literatura, mluvnice)
+     - "history" (dějepis, dějiny)
+     - "science" (fyzika, chemie, biologie, zeměpis)
+     - "uncertain" (pokud je text nejednoznačný nebo je ho příliš málo)
 
 Výstup musí být VÝHRADNĚ validní JSON v tomto formátu (žádný další text okolo):
 {
-  "title": "Výstižný název tématu",
+  "title": "Výstižný název stránky zápisku",
+  "topic": "Název širšího tématu / kapitoly",
   "subject": "maths" | "czech" | "history" | "science" | "uncertain",
   "summary": "Stručné shrnutí 1-2 větami...",
   "markdown": "Kompletní strukturovaný zápisek v Markdownu s KaTeX vzorci"
@@ -180,6 +184,7 @@ function parseModelOutput(content: string): ExtractedNoteResult {
 
     return {
       title: parsed.title || 'Digitalizovaný zápisek',
+      topic: parsed.topic ? String(parsed.topic).trim() : undefined,
       subject,
       summary: parsed.summary || 'Zápisky převedené pomocí AI modelu Dots3-Note-Preview.',
       markdown: parsed.markdown || content,

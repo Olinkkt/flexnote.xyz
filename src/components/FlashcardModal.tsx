@@ -11,14 +11,15 @@ import {
   BookOpen
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { FlashcardItem, NoteItem, SubjectMeta } from '../types/notes';
+import { FlashcardItem, NoteItem, SubjectMeta, TopicGroup } from '../types/notes';
 import { playPopSound, playSuccessChime } from '../utils/audio';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { SubjectIcon } from './SubjectIcon';
 import { generateFlashcardsForNote } from '../services/flashcards';
 
 interface FlashcardModalProps {
-  note: NoteItem;
+  note?: NoteItem;
+  topicGroup?: TopicGroup;
   subjects: SubjectMeta[];
   onClose: () => void;
   onUpdateFlashcards: (noteId: string, flashcards: FlashcardItem[]) => Promise<void> | void;
@@ -26,27 +27,35 @@ interface FlashcardModalProps {
 
 export const FlashcardModal: React.FC<FlashcardModalProps> = ({
   note,
+  topicGroup,
   subjects,
   onClose,
   onUpdateFlashcards,
 }) => {
-  const [cards, setCards] = useState<FlashcardItem[]>(note.flashcards || []);
+  const initialCards = topicGroup
+    ? topicGroup.notes.flatMap((n) => n.flashcards || [])
+    : note?.flashcards || [];
+
+  const [cards, setCards] = useState<FlashcardItem[]>(initialCards);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [masteredIds, setMasteredIds] = useState<Set<string>>(new Set());
 
-  const subjectMeta = subjects.find(s => s.id === note.subject) || subjects[0];
+  const subjectId = topicGroup?.subject || note?.subject || 'czech';
+  const subjectMeta = subjects.find((s) => s.id === subjectId) || subjects[0];
+  const displayTitle = topicGroup ? topicGroup.name : note?.title || 'Kartičky';
 
-  // If no cards exist initially, generate them automatically on first open
+  // If no cards exist initially for single note, generate them automatically on first open
   useEffect(() => {
-    if (!note.flashcards || note.flashcards.length === 0) {
+    if (note && (!note.flashcards || note.flashcards.length === 0)) {
       handleGenerateCards();
     }
   }, []);
 
   const handleGenerateCards = async () => {
+    if (!note) return;
     setIsGenerating(true);
     playPopSound();
     try {
@@ -170,8 +179,8 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
               <SubjectIcon subject={subjectMeta.id} size={14} />
               <span>{subjectMeta.czechName}</span>
             </span>
-            <span className="font-feather font-black text-sm text-duoGray-charcoal truncate" title={note.title}>
-              {note.title}
+            <span className="font-feather font-black text-sm text-duoGray-charcoal truncate" title={displayTitle}>
+              {displayTitle}
             </span>
           </div>
 
@@ -225,7 +234,7 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
                 Skvělá práce! 🎉
               </h2>
               <p className="text-xs font-bold text-duoGray-pencil mb-4">
-                Prošel(a) jsi všech {cards.length} kartiček z tématu „{note.title}“.
+                Prošel(a) jsi všech {cards.length} kartiček z tématu „{displayTitle}“.
               </p>
 
               <div className="bg-gray-50 border-2 border-duoGray-border rounded-2xl p-3.5 mb-5 flex items-center justify-around">

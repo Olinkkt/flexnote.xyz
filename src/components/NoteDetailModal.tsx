@@ -24,6 +24,7 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
   const [copied, setCopied] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(note.title);
+  const [editTopic, setEditTopic] = useState(note.topic || '');
   const [editMarkdown, setEditMarkdown] = useState(note.markdown);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -44,6 +45,7 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
       if (onUpdateNote) {
         await onUpdateNote(note.id, {
           title: editTitle.trim(),
+          topic: editTopic.trim() || undefined,
           markdown: editMarkdown,
         });
       }
@@ -76,6 +78,11 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
               <SubjectIcon subject={subjectMeta.id} size={14} />
               <span>{subjectMeta.czechName}</span>
             </span>
+            {note.topic && (
+              <span className="text-[11px] font-bold text-sparkBlue bg-sparkBlue/10 px-2 py-0.5 rounded-lg border border-sparkBlue/20 truncate max-w-[130px]" title={`Téma: ${note.topic}`}>
+                {note.topic}
+              </span>
+            )}
             <span className="text-[11px] font-bold text-duoGray-pencil">
               {note.date}
             </span>
@@ -189,6 +196,19 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                   onChange={(e) => setEditTitle(e.target.value)}
                   placeholder="Zadej název tématu..."
                   className="w-full px-3.5 py-2.5 rounded-xl border-2 border-duoGray-border font-feather font-black text-sm text-duoGray-charcoal focus:border-sparkBlue focus:outline-hidden"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-feather font-black uppercase text-duoGray-pencil tracking-wider block mb-1">
+                  Téma / Kapitola (propojí související stránky)
+                </label>
+                <input
+                  type="text"
+                  value={editTopic}
+                  onChange={(e) => setEditTopic(e.target.value)}
+                  placeholder="Např. Kvadratické rovnice..."
+                  className="w-full px-3.5 py-2 rounded-xl border-2 border-duoGray-border font-bold text-xs text-duoGray-charcoal focus:border-sparkBlue focus:outline-hidden"
                 />
               </div>
 

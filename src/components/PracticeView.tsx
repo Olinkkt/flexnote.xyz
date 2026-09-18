@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Brain,
   Sparkles,
   Layers,
   ChevronRight,
+  ChevronDown,
   Camera,
   Search,
   X,
@@ -11,9 +12,11 @@ import {
   CheckCircle2,
   FileQuestion,
   Trophy,
-  Award
+  Award,
+  BookOpen,
+  Files
 } from 'lucide-react';
-import { NoteItem, SubjectMeta, FlashcardItem, QuizData, SubjectType } from '../types/notes';
+import { NoteItem, SubjectMeta, FlashcardItem, QuizData, SubjectType, TopicGroup } from '../types/notes';
 import { playPopSound, playSuccessChime } from '../utils/audio';
 import { SubjectIcon } from './SubjectIcon';
 import { FlashcardModal } from './FlashcardModal';
@@ -39,9 +42,9 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
   onUpdateQuiz,
   onOpenScan,
 }) => {
-  const [activeDeckNote, setActiveDeckNote] = useState<NoteItem | null>(null);
-  const [activeQuizNote, setActiveQuizNote] = useState<NoteItem | null>(null);
-  const [generatingNoteId, setGeneratingNoteId] = useState<string | null>(null);
+  const [activeTopicForCards, setActiveTopicForCards] = useState<TopicGroup | null>(null);
+  const [activeTopicForQuiz, setActiveTopicForQuiz] = useState<TopicGroup | null>(null);
+  const [expandedTopicIds, setExpandedTopicIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMode, setFilterMode] = useState<'all' | 'flashcards' | 'quiz'>('all');
 
@@ -56,52 +59,84 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
     (n) => n.quiz && n.quiz.questions && n.quiz.questions.length > 0
   ).length;
 
-  const totalDecksWithCards = allNotes.filter(
-    (n) => n.flashcards && n.flashcards.length > 0
-  ).length;
+  // Total unique topics
+  const totalTopicsCount = useMemo(() => {
+    const set = new Set(allNotes.map((n) => `${n.subject}:${(n.topic?.trim() || n.title.trim()).toLowerCase()}`));
+    return set.size;
+  }, [allNotes]);
 
   const getSubjectMeta = (subjectId: string) => {
     return subjects.find((s) => s.id === subjectId) || subjects[0];
   };
 
-  const filteredNotes = notes.filter((n) => {
-    if (filterMode === 'flashcards' && (!n.flashcards || n.flashcards.length === 0)) return false;
-    if (filterMode === 'quiz' && (!n.quiz || !n.quiz.questions || n.quiz.questions.length === 0)) return false;
+  // Group filtered notes into TopicGroups
+  const topicGroups: TopicGroup[] = useMemo(() => {
+    const map = new Map<string, TopicGroup>();
 
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      n.title.toLowerCase().includes(q) ||
-      n.summary.toLowerCase().includes(q) ||
-      (n.tags && n.tags.some((t) => t.toLowerCase().includes(q)))
-    );
-  });
+    notes.forEach((note) => {
+      const topicName = note.topic?.trim() || note.title.trim();
+      const key = `${note.subject}:${topicName.toLowerCase()}`;
 
-  const handleStartDeck = async (note: NoteItem) => {
-    playPopSound();
-    if (note.flashcards && note.flashcards.length > 0) {
-      setActiveDeckNote(note);
-      return;
-    }
-
-    setGeneratingNoteId(note.id);
-    try {
-      const generated = await generateFlashcardsForNote(note);
-      if (generated && generated.length > 0) {
-        await onUpdateFlashcards(note.id, generated);
-        playSuccessChime();
-        setActiveDeckNote({ ...note, flashcards: generated });
+      if (!map.has(key)) {
+        map.set(key, {
+          id: key,
+          name: topicName,
+          subject: note.subject,
+          notes: [note],
+          combinedMarkdown: note.markdown,
+          totalFlashcards: (note.flashcards || []).length,
+          bestScore: note.quiz?.bestScore,
+          quiz: note.quiz,
+        });
+      } else {
+        const group = map.get(key)!;
+        group.notes.push(note);
+        group.combinedMarkdown += `\n\n---\n\n${note.markdown}`;
+        group.totalFlashcards += (note.flashcards || []).length;
+        if (note.quiz?.bestScore !== undefined) {
+          group.bestScore = Math.max(group.bestScore || 0, note.quiz.bestScore);
+        }
+        if (note.quiz?.questions && note.quiz.questions.length > 0 && (!group.quiz || !group.quiz.questions?.length)) {
+          group.quiz = note.quiz;
+        }
       }
-    } catch (err) {
-      console.error('Failed to generate cards for deck:', err);
-    } finally {
-      setGeneratingNoteId(null);
-    }
+    });
+
+    return Array.from(map.values());
+  }, [notes]);
+
+  const filteredTopicGroups = useMemo(() => {
+    return topicGroups.filter((group) => {
+      if (filterMode === 'flashcards' && group.totalFlashcards === 0) return false;
+      if (filterMode === 'quiz' && (!group.quiz?.questions || group.quiz.questions.length === 0)) return false;
+
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        group.name.toLowerCase().includes(q) ||
+        group.notes.some((n) => n.title.toLowerCase().includes(q) || n.summary.toLowerCase().includes(q))
+      );
+    });
+  }, [topicGroups, filterMode, searchQuery]);
+
+  const toggleTopicExpand = (topicId: string) => {
+    playPopSound();
+    setExpandedTopicIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(topicId)) next.delete(topicId);
+      else next.add(topicId);
+      return next;
+    });
   };
 
-  const handleStartQuiz = (note: NoteItem) => {
+  const handleStartTopicCards = (group: TopicGroup) => {
     playPopSound();
-    setActiveQuizNote(note);
+    setActiveTopicForCards(group);
+  };
+
+  const handleStartTopicQuiz = (group: TopicGroup) => {
+    playPopSound();
+    setActiveTopicForQuiz(group);
   };
 
   return (
@@ -110,10 +145,10 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
       <div className="mb-3.5">
         <h2 className="font-feather font-black text-[20px] text-duoGray-charcoal leading-tight flex items-center gap-2">
           <Brain size={22} className="text-sparkBlue" />
-          <span>Procvičování</span>
+          <span>Procvičování témat</span>
         </h2>
         <p className="text-[12px] font-bold text-duoGray-pencil mt-0.5">
-          Chytré 3D kartičky, vzorce a klíčové pojmy ze zápisků
+          Souhrnné cvičné testy a kartičky propojené napříč celými tématy
         </p>
       </div>
 
@@ -143,7 +178,7 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
 
         <div className="text-center">
           <div className="font-feather font-black text-lg text-duoGray-charcoal">
-            {allNotes.length}
+            {totalTopicsCount}
           </div>
           <div className="text-[10px] font-feather font-bold text-duoGray-pencil uppercase tracking-wider">
             Témat celkem
@@ -165,7 +200,7 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
               : 'border-duoGray-border bg-white text-duoGray-pencil hover:text-duoGray-charcoal'
           }`}
         >
-          Vše
+          Všechna témata
         </button>
         <button
           type="button"
@@ -223,14 +258,14 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
         )}
       </div>
 
-      {/* Decks List */}
-      {filteredNotes.length === 0 ? (
+      {/* Topic Groups List */}
+      {filteredTopicGroups.length === 0 ? (
         <div className="duo-card p-8 text-center bg-white">
           <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-3 text-duoGray-pencil">
             <Layers size={24} />
           </div>
           <h3 className="font-feather font-black text-sm text-duoGray-charcoal mb-1">
-            Žádné studijní materiály
+            Žádná témata k procvičování
           </h3>
           <p className="text-xs text-duoGray-pencil mb-4 max-w-[240px] mx-auto">
             {searchQuery.trim()
@@ -253,19 +288,20 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {filteredNotes.map((note) => {
-            const meta = getSubjectMeta(note.subject);
-            const cardCount = note.flashcards ? note.flashcards.length : 0;
-            const quizCount = note.quiz?.questions ? note.quiz.questions.length : 0;
-            const bestScore = note.quiz?.bestScore;
-            const isGenerating = generatingNoteId === note.id;
+          {filteredTopicGroups.map((group) => {
+            const meta = getSubjectMeta(group.subject);
+            const cardCount = group.totalFlashcards;
+            const quizCount = group.quiz?.questions ? group.quiz.questions.length : 0;
+            const bestScore = group.bestScore;
+            const isExpanded = expandedTopicIds.has(group.id);
+            const pageCount = group.notes.length;
 
             return (
               <div
-                key={note.id}
+                key={group.id}
                 className="duo-card p-4 transition-all bg-white flex flex-col justify-between gap-3 border-2 border-duoGray-border hover:border-duoGray-charcoal/30"
               >
-                {/* Top Row: Subject Badge + Date */}
+                {/* Top Row: Subject Badge + Page count */}
                 <div className="flex items-center justify-between">
                   <span
                     className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-duo text-[11px] font-feather font-extrabold uppercase tracking-wide"
@@ -279,20 +315,54 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
                     <span>{meta.czechName}</span>
                   </span>
 
-                  <span className="text-[11px] font-bold text-duoGray-pencil">
-                    {note.date}
-                  </span>
+                  {/* Multi-page badge */}
+                  <button
+                    type="button"
+                    onClick={() => toggleTopicExpand(group.id)}
+                    className="inline-flex items-center gap-1 text-[11px] font-feather font-black text-duoGray-pencil hover:text-duoGray-charcoal bg-gray-100 hover:bg-gray-200 px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <Files size={12} className="text-sparkBlue" />
+                    <span>
+                      {pageCount} {pageCount === 1 ? 'stránka' : pageCount < 5 ? 'stránky' : 'stránek'}
+                    </span>
+                    <ChevronDown
+                      size={13}
+                      className={`transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                    />
+                  </button>
                 </div>
 
-                {/* Deck Title & Summary */}
+                {/* Topic Title & Summary */}
                 <div>
-                  <h3 className="font-feather font-black text-[15px] text-duoGray-charcoal leading-snug">
-                    {note.title}
+                  <h3 className="font-feather font-black text-[16px] text-duoGray-charcoal leading-snug">
+                    {group.name}
                   </h3>
                   <p className="text-[12px] text-duoGray-pencil line-clamp-2 mt-1 leading-snug">
-                    {note.summary || 'Materiál pro zkoušení a opakování ze školního sešitu.'}
+                    {group.notes[0]?.summary || `Ucelená kapitola s ${pageCount} částmi ze školního sešitu.`}
                   </p>
                 </div>
+
+                {/* Collapsible Pages list if topic has multiple notes or expanded */}
+                {isExpanded && (
+                  <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 flex flex-col gap-2 animate-in fade-in duration-150">
+                    <div className="text-[10px] font-feather font-black uppercase text-duoGray-pencil tracking-wider">
+                      Stránky v této kapitole:
+                    </div>
+                    {group.notes.map((n, idx) => (
+                      <div
+                        key={n.id}
+                        className="flex items-center justify-between text-xs py-1 border-b border-gray-200 last:border-0"
+                      >
+                        <span className="font-bold text-duoGray-charcoal truncate flex-1 pr-2">
+                          {idx + 1}. {n.title}
+                        </span>
+                        <span className="text-[10px] text-duoGray-pencil font-medium shrink-0">
+                          {n.date}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* Status Badges Row */}
                 <div className="flex flex-wrap items-center gap-2 pt-1">
@@ -310,7 +380,7 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
                   {quizCount > 0 ? (
                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-eagerGreen/10 text-eagerGreen text-[11px] font-feather font-black">
                       <FileQuestion size={12} />
-                      <span>{quizCount} {quizCount === 1 ? 'otázka' : quizCount < 5 ? 'otázky' : 'otázek'}</span>
+                      <span>Souhrnný test ({quizCount} otázek)</span>
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-duoGray-pencil text-[11px] font-bold">
@@ -331,35 +401,23 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
                   {/* Flashcards Button */}
                   <button
                     type="button"
-                    disabled={isGenerating}
-                    onClick={() => handleStartDeck(note)}
+                    onClick={() => handleStartTopicCards(group)}
                     className={`duo-btn text-xs font-feather font-black uppercase tracking-wider py-1.5 px-3 flex items-center gap-1.5 cursor-pointer ${
                       cardCount > 0 ? 'duo-btn-blue' : 'border-2 border-duoGray-border border-b-4 bg-white text-duoGray-charcoal hover:bg-gray-50'
                     }`}
                   >
-                    {isGenerating ? (
-                      <>
-                        <Loader2 size={13} className="animate-spin" />
-                        <span>Vytvářím...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Layers size={13} />
-                        <span>{cardCount > 0 ? 'Kartičky' : 'Vytvořit kartičky'}</span>
-                      </>
-                    )}
+                    <Layers size={13} />
+                    <span>{cardCount > 0 ? 'Kartičky tématu' : 'Vytvořit kartičky'}</span>
                   </button>
 
                   {/* Quiz Button */}
                   <button
                     type="button"
-                    onClick={() => handleStartQuiz(note)}
-                    className={`duo-btn text-xs font-feather font-black uppercase tracking-wider py-1.5 px-3.5 flex items-center gap-1.5 cursor-pointer ${
-                      quizCount > 0 ? 'duo-btn-green' : 'duo-btn-green'
-                    }`}
+                    onClick={() => handleStartTopicQuiz(group)}
+                    className="duo-btn duo-btn-green text-xs font-feather font-black uppercase tracking-wider py-1.5 px-3.5 flex items-center gap-1.5 cursor-pointer"
                   >
                     <FileQuestion size={13} />
-                    <span>{quizCount > 0 ? 'Cvičný test' : 'Vytvořit test'}</span>
+                    <span>{quizCount > 0 ? 'Souhrnný test' : 'Vytvořit test'}</span>
                   </button>
                 </div>
               </div>
@@ -368,28 +426,30 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
         </div>
       )}
 
-      {/* 3D Duolingo Flashcard Modal */}
-      {activeDeckNote && (
+      {/* 3D Duolingo Flashcard Modal for Topic */}
+      {activeTopicForCards && (
         <FlashcardModal
-          note={activeDeckNote}
+          topicGroup={activeTopicForCards}
           subjects={subjects}
-          onClose={() => setActiveDeckNote(null)}
+          onClose={() => setActiveTopicForCards(null)}
           onUpdateFlashcards={async (noteId, flashcards) => {
             await onUpdateFlashcards(noteId, flashcards);
-            setActiveDeckNote((prev) => (prev && prev.id === noteId ? { ...prev, flashcards } : prev));
           }}
         />
       )}
 
-      {/* Interactive Practice Quiz Modal */}
-      {activeQuizNote && (
+      {/* Interactive Practice Quiz Modal for Topic */}
+      {activeTopicForQuiz && (
         <QuizModal
-          note={activeQuizNote}
+          topicGroup={activeTopicForQuiz}
           subjects={subjects}
-          onClose={() => setActiveQuizNote(null)}
-          onUpdateQuiz={async (noteId, quiz) => {
-            await onUpdateQuiz(noteId, quiz);
-            setActiveQuizNote((prev) => (prev && prev.id === noteId ? { ...prev, quiz } : prev));
+          onClose={() => setActiveTopicForQuiz(null)}
+          onUpdateQuiz={async (quiz) => {
+            // Persist the unified quiz to all notes belonging to this topic
+            for (const note of activeTopicForQuiz.notes) {
+              await onUpdateQuiz(note.id, quiz);
+            }
+            setActiveTopicForQuiz((prev) => (prev ? { ...prev, quiz, bestScore: quiz.bestScore } : null));
           }}
         />
       )}

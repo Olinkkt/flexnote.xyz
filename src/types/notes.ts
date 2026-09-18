@@ -67,6 +67,7 @@ export interface QuizData {
 export interface NoteItem {
   id: string;
   title: string;
+  topic?: string;
   subject: SubjectType;
   date: string;
   timestamp: number;
@@ -79,6 +80,17 @@ export interface NoteItem {
   summary: string;
   keyFormulas?: string[];
   flashcards?: FlashcardItem[];
+  quiz?: QuizData;
+}
+
+export interface TopicGroup {
+  id: string;
+  name: string;
+  subject: SubjectType;
+  notes: NoteItem[];
+  combinedMarkdown: string;
+  totalFlashcards: number;
+  bestScore?: number;
   quiz?: QuizData;
 }
 

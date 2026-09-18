@@ -13,26 +13,29 @@ import {
   AlertCircle
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { NoteItem, SubjectMeta, QuizQuestion, QuizData, MultipleChoiceQuestion, FillInQuestion, MatchingQuestion } from '../types/notes';
+import { NoteItem, SubjectMeta, QuizQuestion, QuizData, TopicGroup } from '../types/notes';
 import { playPopSound, playSuccessChime, playStreakSound, playErrorSound } from '../utils/audio';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { SubjectIcon } from './SubjectIcon';
-import { generateQuizForNote } from '../services/quiz';
+import { generateQuizForNote, generateQuizForTopic } from '../services/quiz';
 
 interface QuizModalProps {
-  note: NoteItem;
+  note?: NoteItem;
+  topicGroup?: TopicGroup;
   subjects: SubjectMeta[];
   onClose: () => void;
-  onUpdateQuiz: (noteId: string, quiz: QuizData) => Promise<void> | void;
+  onUpdateQuiz: (quiz: QuizData) => Promise<void> | void;
 }
 
 export const QuizModal: React.FC<QuizModalProps> = ({
   note,
+  topicGroup,
   subjects,
   onClose,
   onUpdateQuiz,
 }) => {
-  const [questions, setQuestions] = useState<QuizQuestion[]>(note.quiz?.questions || []);
+  const existingQuiz = topicGroup?.quiz || note?.quiz;
+  const [questions, setQuestions] = useState<QuizQuestion[]>(existingQuiz?.questions || []);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
@@ -55,7 +58,11 @@ export const QuizModal: React.FC<QuizModalProps> = ({
   const [isAnswerChecked, setIsAnswerChecked] = useState(false);
   const [isAnswerCorrect, setIsAnswerCorrect] = useState(false);
 
-  const subjectMeta = subjects.find((s) => s.id === note.subject) || subjects[0];
+  const activeSubject = topicGroup?.subject || note?.subject || 'czech';
+  const activeTitle = topicGroup ? `Téma: ${topicGroup.name}` : note?.title || 'Cvičný test';
+  const existingBestScore = existingQuiz?.bestScore || 0;
+
+  const subjectMeta = subjects.find((s) => s.id === activeSubject) || subjects[0];
   const currentQuestion: QuizQuestion | undefined = questions[currentIndex];
 
   // Shuffled options for right column of matching question
@@ -68,7 +75,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
 
   // Load or generate quiz on mount if empty
   useEffect(() => {
-    if (!note.quiz?.questions || note.quiz.questions.length === 0) {
+    if (!existingQuiz?.questions || existingQuiz.questions.length === 0) {
       handleGenerateQuiz();
     }
   }, []);
@@ -79,7 +86,13 @@ export const QuizModal: React.FC<QuizModalProps> = ({
     playPopSound();
 
     try {
-      const generated = await generateQuizForNote(note);
+      let generated: QuizQuestion[] = [];
+      if (topicGroup && topicGroup.notes.length > 0) {
+        generated = await generateQuizForTopic(topicGroup.name, topicGroup.subject, topicGroup.notes);
+      } else if (note) {
+        generated = await generateQuizForNote(note);
+      }
+
       if (generated && generated.length > 0) {
         setQuestions(generated);
         setCurrentIndex(0);
@@ -89,10 +102,10 @@ export const QuizModal: React.FC<QuizModalProps> = ({
 
         const newQuizData: QuizData = {
           questions: generated,
-          bestScore: note.quiz?.bestScore,
+          bestScore: existingBestScore,
           lastAttemptAt: Date.now(),
         };
-        await onUpdateQuiz(note.id, newQuizData);
+        await onUpdateQuiz(newQuizData);
         playSuccessChime();
       }
     } catch (err: any) {
@@ -230,11 +243,10 @@ export const QuizModal: React.FC<QuizModalProps> = ({
       resetQuestionState();
     } else {
       // Finished all questions!
-      const totalScorePercent = Math.round(((correctCount + (isAnswerCorrect ? 0 : 0)) / questions.length) * 100);
-      const existingBest = note.quiz?.bestScore || 0;
-      const newBestScore = Math.max(existingBest, totalScorePercent);
+      const totalScorePercent = Math.round((correctCount / questions.length) * 100);
+      const newBestScore = Math.max(existingBestScore, totalScorePercent);
 
-      onUpdateQuiz(note.id, {
+      onUpdateQuiz({
         questions,
         bestScore: newBestScore,
         lastAttemptAt: Date.now(),
@@ -251,7 +263,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
         });
       } catch {}
     }
-  }, [currentIndex, questions.length, correctCount, isAnswerCorrect, note.id, note.quiz?.bestScore, onUpdateQuiz]);
+  }, [currentIndex, questions.length, correctCount, existingBestScore, onUpdateQuiz]);
 
   // Can the user submit their answer?
   const canCheck = useMemo(() => {
@@ -331,7 +343,9 @@ export const QuizModal: React.FC<QuizModalProps> = ({
                 AI připravuje cvičný test...
               </h3>
               <p className="text-xs text-duoGray-pencil max-w-sm">
-                Vytváříme interaktivní otázky A/B/C/D, doplňovačky vzorců a spojování pojmů přesně podle tvého sešitu.
+                {topicGroup
+                  ? `Vytváříme souhrnný test pokrývající všech ${topicGroup.notes.length} stránek z tématu „${topicGroup.name}“.`
+                  : 'Vytváříme interaktivní otázky A/B/C/D, doplňovačky vzorců a spojování pojmů přesně podle tvého sešitu.'}
               </p>
             </div>
           )}

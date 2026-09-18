@@ -25,6 +25,7 @@ export type Database = {
           tags: string[] | null
           thumbnail_url: string | null
           title: string
+          topic: string | null
           updated_at: string | null
           user_id: string | null
         }
@@ -40,6 +41,7 @@ export type Database = {
           tags?: string[] | null
           thumbnail_url?: string | null
           title: string
+          topic?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
@@ -55,6 +57,7 @@ export type Database = {
           tags?: string[] | null
           thumbnail_url?: string | null
           title?: string
+          topic?: string | null
           updated_at?: string | null
           user_id?: string | null
         }

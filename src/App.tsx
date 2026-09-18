@@ -448,6 +448,7 @@ export const App: React.FC = () => {
               onClose={() => setScanModalOpen(false)}
               onSaveNote={handleSaveScannedNote}
               userId={user?.id}
+              existingNotes={notes}
             />
           )}
 
