@@ -21,10 +21,7 @@ import {
   Smartphone,
   HardDrive,
   RefreshCw,
-  Flame,
   Clock,
-  Shield,
-  Share2,
 } from 'lucide-react';
 import { UserProfile, signOutUser, updateUserProfile, checkUsernameAvailability } from '../services/supabase';
 import { GamificationState } from '../types/notes';
@@ -39,8 +36,6 @@ interface ProfileViewProps {
   onSignOut: () => void;
   onUpdateProfile?: (updated: UserProfile) => void;
   onOpenExport?: () => void;
-  onOpenStreakModal?: () => void;
-  onOpenLeaderboard?: () => void;
   isOnline?: boolean;
   pendingSyncCount?: number;
   isSyncing?: boolean;
@@ -72,8 +67,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onSignOut,
   onUpdateProfile,
   onOpenExport,
-  onOpenStreakModal,
-  onOpenLeaderboard,
   isOnline = true,
   pendingSyncCount = 0,
   isSyncing = false,
@@ -264,130 +257,37 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </button>
       </div>
 
-      {/* Gamified Stats Grid */}
+      {/* Clean 2-Card Stats Grid (Notes & Study Time) */}
       <div className="grid grid-cols-2 gap-2.5">
         {/* Zápisky */}
-        <div className="duo-card p-3 bg-white flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-storybookGreen text-eagerGreen flex items-center justify-center shrink-0">
-            <BookOpen size={18} className="stroke-[2.5]" />
+        <div className="duo-card p-3.5 bg-white flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-storybookGreen text-eagerGreen flex items-center justify-center shrink-0">
+            <BookOpen size={20} className="stroke-[2.5]" />
           </div>
           <div className="min-w-0">
             <div className="text-[10px] font-feather font-black uppercase text-duoGray-pencil">
               Zápisky
             </div>
-            <div className="font-feather font-black text-base text-duoGray-charcoal truncate">
+            <div className="font-feather font-black text-lg text-duoGray-charcoal truncate">
               {totalNotes}
-            </div>
-            <div className="text-[9.5px] font-bold text-duoGray-pencil truncate">
-              Všechna témata
-            </div>
-          </div>
-        </div>
-
-        {/* Denní série */}
-        <button
-          onClick={() => {
-            playPopSound();
-            onOpenStreakModal?.();
-          }}
-          className="duo-card p-3 bg-white flex items-center gap-2.5 text-left transition hover:border-amber-400 cursor-pointer"
-        >
-          <div className="w-9 h-9 rounded-xl bg-amber-50 text-orange-500 flex items-center justify-center shrink-0">
-            <Flame size={18} className="fill-orange-400 stroke-[2.5]" />
-          </div>
-          <div className="min-w-0">
-            <div className="text-[10px] font-feather font-black uppercase text-duoGray-pencil">
-              Série
-            </div>
-            <div className="font-feather font-black text-base text-orange-600 truncate">
-              {gamification?.streakDays ?? profile?.streak_days ?? 0} dní
-            </div>
-            <div className="text-[9.5px] font-bold text-duoGray-pencil truncate">
-              Rekord: {gamification?.bestStreak ?? profile?.best_streak ?? 1} dní
-            </div>
-          </div>
-        </button>
-
-        {/* Drahokamy */}
-        <div className="duo-card p-3 bg-white flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-sparkBlue-tint text-sparkBlue flex items-center justify-center shrink-0">
-            <Sparkles size={18} className="stroke-[2.5]" />
-          </div>
-          <div className="min-w-0">
-            <div className="text-[10px] font-feather font-black uppercase text-duoGray-pencil">
-              Drahokamy
-            </div>
-            <div className="font-feather font-black text-base text-sparkBlue truncate">
-              {gamification?.diamonds ?? profile?.diamonds ?? 0} 💎
-            </div>
-            <div className="text-[9.5px] font-bold text-duoGray-pencil truncate">
-              +{gamification?.weeklyDiamonds ?? profile?.weekly_diamonds ?? 0} tento týden
             </div>
           </div>
         </div>
 
         {/* Čas studia */}
-        <div className="duo-card p-3 bg-white flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-500 flex items-center justify-center shrink-0">
-            <Clock size={18} className="stroke-[2.5]" />
+        <div className="duo-card p-3.5 bg-white flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-500 flex items-center justify-center shrink-0">
+            <Clock size={20} className="stroke-[2.5]" />
           </div>
           <div className="min-w-0">
             <div className="text-[10px] font-feather font-black uppercase text-duoGray-pencil">
-              Aktivní studium
+              Čas studia
             </div>
-            <div className="font-feather font-black text-sm text-duoGray-charcoal truncate">
+            <div className="font-feather font-black text-lg text-duoGray-charcoal truncate">
               {formatStudyDuration(gamification?.studyTimeSeconds ?? profile?.study_time_seconds ?? 0)}
-            </div>
-            <div className="text-[9.5px] font-bold text-duoGray-pencil truncate">
-              Týden: {formatStudyDuration(gamification?.weeklyStudySeconds ?? profile?.weekly_study_seconds ?? 0)}
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Streak Freeze & Leaderboard Action Bar */}
-      <div className="grid grid-cols-2 gap-2.5">
-        <button
-          onClick={() => {
-            playPopSound();
-            onOpenStreakModal?.();
-          }}
-          className="duo-btn duo-btn-white p-2.5 flex items-center justify-between text-left cursor-pointer border-2 border-duoGray-border"
-        >
-          <div className="flex items-center gap-2 min-w-0">
-            <Shield size={16} className="text-sparkBlue shrink-0" />
-            <div className="min-w-0">
-              <span className="text-xs font-feather font-black text-duoGray-charcoal block truncate">
-                Záchrana série
-              </span>
-              <span className="text-[10px] font-bold text-duoGray-pencil block truncate">
-                {gamification?.streakFreezes ?? profile?.streak_freezes ?? 0} k dispozici
-              </span>
-            </div>
-          </div>
-          <ChevronRight size={14} className="text-duoGray-pencil shrink-0" />
-        </button>
-
-        <button
-          onClick={() => {
-            playPopSound();
-            onOpenLeaderboard?.();
-          }}
-          className="duo-btn duo-btn-white p-2.5 flex items-center justify-between text-left cursor-pointer border-2 border-duoGray-border"
-        >
-          <div className="flex items-center gap-2 min-w-0">
-            <Share2 size={16} className="text-orange-500 shrink-0" />
-            <div className="min-w-0">
-              <span className="text-xs font-feather font-black text-duoGray-charcoal block truncate">
-                Flexit výsledky
-              </span>
-              <span className="text-[10px] font-bold text-duoGray-pencil block truncate">
-                Přejít do žebříčku
-              </span>
-            </div>
-          </div>
-          <ChevronRight size={14} className="text-duoGray-pencil shrink-0" />
-        </button>
       </div>
 
       {/* Combined Cloud & Offline Storage Card */}

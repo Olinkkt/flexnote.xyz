@@ -31,6 +31,7 @@ import { ConfirmEmailScreen } from './components/ConfirmEmailScreen';
 import { ProfileView } from './components/ProfileView';
 import { LeaderboardView } from './components/LeaderboardView';
 import { StreakModal } from './components/StreakModal';
+import { StreakRescueModal } from './components/StreakRescueModal';
 import { ExportNotesModal } from './components/ExportNotesModal';
 import { useOfflineSync, enqueueOfflineAction } from './services/offlineSync';
 import { OfflineBanner } from './components/OfflineBanner';
@@ -66,7 +67,14 @@ export const App: React.FC = () => {
   const [streakModalOpen, setStreakModalOpen] = useState(false);
 
   // Central Gamification & Dopamine Loop State
-  const { gamification, buyStreakFreeze } = useGamification(userProfile, user?.id);
+  const {
+    gamification,
+    buyStreakFreeze,
+    autoRescueData,
+    restoreStreakWithDiamonds,
+    confirmStreakReset,
+    closeAutoRescueModal,
+  } = useGamification(userProfile, user?.id);
 
   const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(() => {
     try {
@@ -450,8 +458,6 @@ export const App: React.FC = () => {
                 onSignOut={handleSignOut}
                 onUpdateProfile={(updated) => setUserProfile(updated)}
                 onOpenExport={() => setExportModalOpen(true)}
-                onOpenStreakModal={() => setStreakModalOpen(true)}
-                onOpenLeaderboard={() => setActiveTab('leaderboard')}
                 isOnline={isOnline}
                 pendingSyncCount={pendingCount}
                 isSyncing={isSyncing}
@@ -495,6 +501,19 @@ export const App: React.FC = () => {
               gamification={gamification}
               onClose={() => setStreakModalOpen(false)}
               onBuyFreeze={buyStreakFreeze}
+            />
+          )}
+
+          {/* Automatic Streak Rescue / Loss Dialog */}
+          {autoRescueData && (
+            <StreakRescueModal
+              type={autoRescueData.type}
+              streakDays={autoRescueData.streakDays}
+              remainingFreezes={autoRescueData.remainingFreezes}
+              userDiamonds={gamification.diamonds}
+              onRestoreWithDiamonds={restoreStreakWithDiamonds}
+              onStartNewStreak={confirmStreakReset}
+              onClose={closeAutoRescueModal}
             />
           )}
 

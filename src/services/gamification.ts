@@ -181,6 +181,12 @@ export function recordStudyActivity(
   };
 }
 
+export interface AutoStreakRescueData {
+  type: 'rescued' | 'lost';
+  streakDays: number;
+  remainingFreezes?: number;
+}
+
 /**
  * React Hook for consuming and modifying gamification state
  */
@@ -188,6 +194,7 @@ export function useGamification(profile?: UserProfile | null, userId?: string) {
   const [gamification, setGamification] = useState<GamificationState>(() =>
     loadGamificationState(profile)
   );
+  const [autoRescueData, setAutoRescueData] = useState<AutoStreakRescueData | null>(null);
 
   // Sync when profile changes
   useEffect(() => {
@@ -208,6 +215,46 @@ export function useGamification(profile?: UserProfile | null, userId?: string) {
 
     window.addEventListener(GAMIFICATION_EVENT, handleUpdate);
     return () => window.removeEventListener(GAMIFICATION_EVENT, handleUpdate);
+  }, []);
+
+  // Automatic check on app launch: did the student miss a day?
+  useEffect(() => {
+    const today = getLocalDateString();
+    const yesterday = getYesterdayDateString();
+    const lastDate = gamification.lastStudyDate;
+
+    // If student had an active streak and missed at least 1 day
+    if (lastDate && lastDate !== today && lastDate !== yesterday && gamification.streakDays > 0) {
+      const alreadyHandledToday = localStorage.getItem('flexnote_streak_loss_handled_date') === today;
+      if (!alreadyHandledToday) {
+        try {
+          localStorage.setItem('flexnote_streak_loss_handled_date', today);
+        } catch {}
+
+        if (gamification.streakFreezes > 0) {
+          // Automatic rescue with streak freeze!
+          const newFreezes = gamification.streakFreezes - 1;
+          const updated: GamificationState = {
+            ...gamification,
+            streakFreezes: newFreezes,
+            lastStudyDate: yesterday, // protected so studying today maintains the streak!
+          };
+          saveGamificationState(updated, userId);
+          setGamification(updated);
+          setAutoRescueData({
+            type: 'rescued',
+            streakDays: gamification.streakDays,
+            remainingFreezes: newFreezes,
+          });
+        } else {
+          // Streak lost! Give student option to recover with diamonds or start fresh
+          setAutoRescueData({
+            type: 'lost',
+            streakDays: gamification.streakDays,
+          });
+        }
+      }
+    }
   }, []);
 
   const addDiamonds = useCallback(
@@ -245,10 +292,46 @@ export function useGamification(profile?: UserProfile | null, userId?: string) {
     return { success: true };
   }, [gamification, userId]);
 
+  const restoreStreakWithDiamonds = useCallback(async (): Promise<boolean> => {
+    if (gamification.diamonds < 50) return false;
+    const yesterday = getYesterdayDateString();
+
+    const updated: GamificationState = {
+      ...gamification,
+      diamonds: gamification.diamonds - 50,
+      lastStudyDate: yesterday, // keeps streak alive!
+    };
+
+    saveGamificationState(updated, userId);
+    setGamification(updated);
+    setAutoRescueData(null);
+    return true;
+  }, [gamification, userId]);
+
+  const confirmStreakReset = useCallback(() => {
+    const updated: GamificationState = {
+      ...gamification,
+      streakDays: 0,
+      lastStudyDate: null,
+    };
+    saveGamificationState(updated, userId);
+    setGamification(updated);
+    setAutoRescueData(null);
+  }, [gamification, userId]);
+
+  const closeAutoRescueModal = useCallback(() => {
+    setAutoRescueData(null);
+  }, []);
+
   return {
     gamification,
     addDiamonds,
     addStudyTime,
     buyStreakFreeze,
+    autoRescueData,
+    restoreStreakWithDiamonds,
+    confirmStreakReset,
+    closeAutoRescueModal,
   };
 }
+
