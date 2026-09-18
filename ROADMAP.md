@@ -92,27 +92,7 @@ Cíl: Udělat z učení návykovou aktivitu plnou dopaminu, kde spolu studenti m
 
 ---
 
-## 🎁 Verze 5: Bedny s raritami (CS:GO Chests & Customisation)
-Cíl: Herní systém odměn s otevíráním truhel a unikátními předměty pro úpravu profilu.
-
-1. **Mechanika otevírání beden (Chest Unboxing)**:
-   - Možnost otevřít truhlu za nasbírané drahokamy ze studia nebo za splnění velkých cílů.
-   - Animovaný pás rotujících předmětů se zvukem tikání a napětím jako v CS:GO / herních loot boxech.
-2. **Systém rarit (Rarity Tiers)**:
-   - ⚪ **Common (Běžné)** — Základní barvy a jednoduché rámečky.
-   - 🔵 **Rare (Vzácné)** — Elegantní tematické ikony a odznaky.
-   - 🟣 **Epic (Epické)** — Animované rámečky profilu, speciální barvy karet.
-   - 🟡 **Legendary (Legendární)** — Zlaté a holografické efekty na profilu, exkluzivní tituly.
-   - 🔴 **Mythic (Mytické)** — Extrémně vzácné zářící aury, částicové efekty a unikátní zvukové sady aplikace.
-3. **Kustomizace profilu (Profile Customisation)**:
-   - Vybavitelné skiny na profil a avatary.
-   - Vlastní tituly u jména (např. *Matematický mág*, *Knihomol*, *Noční sova*).
-   - Alternativní barevné motivy pro zápisky a 3D karty.
-   - Výměna nebo vystavení nejvzácnějších trofejí ve vitríně na profilu.
-
----
-
-## 🏫 Verze 6: Třídy, Sdílení zápisků & Školní komunity (Classroom & Shared Notes)
+## 🏫 Verze 5: Třídy, Sdílení zápisků & Školní komunity (Classroom & Shared Notes)
 Cíl: Propojit spolužáky z téže školy a třídy, umožnit sdílení zdigitalizovaných sešitů a výběr školy z oficiální databáze MŠMT.
 
 1. **Databáze škol MŠMT v profilu**:
@@ -124,4 +104,12 @@ Cíl: Propojit spolužáky z téže školy a třídy, umožnit sdílení zdigita
 3. **Sdílené zápisky ve třídě (Classroom Shared Notes)**:
    - Společný třídní feed zdigitalizovaných zápisků z jednotlivých předmětů.
    - Uživatelé v jedné třídě mohou sdílet zdigitalizované zápisky ze sešitu se spolužáky, ukládat si je a společně se učit.
+
+---
+
+## 🔮 Nápady do budoucna (Later / Backlog)
+
+- **Bedny s raritami (CS:GO Chests & Customisation)**:
+  - Herní systém odměn s otevíráním truhel a unikátními předměty pro úpravu profilu (odloženo na později pro zachování čistého zaměření na studium a komunitu).
+
 
