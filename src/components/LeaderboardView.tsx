@@ -154,9 +154,9 @@ Trumfneš mě? 🚀`;
   };
 
   return (
-    <div className="flex flex-col gap-3.5 pb-16 select-none animate-in fade-in duration-150">
+    <div className="px-4 py-2 flex flex-col gap-3.5 pb-20 select-none animate-in fade-in duration-150">
       {/* Clean, Airy Header Row */}
-      <div className="flex items-center justify-between pt-1 px-0.5">
+      <div className="flex items-center justify-between pt-1">
         <div>
           <h2 className="font-feather font-black text-2xl text-duoGray-charcoal tracking-tight">
             Žebříček
@@ -229,7 +229,7 @@ Trumfneš mě? 🚀`;
       </div>
 
       {/* Secondary Filter Row: Timeframe & School Filter */}
-      <div className="flex items-center justify-between px-0.5">
+      <div className="flex items-center justify-between">
         {/* Compact Timeframe Switcher */}
         <div className="flex items-center gap-1 bg-white border border-duoGray-border/70 rounded-xl p-0.5 shadow-2xs">
           <button
