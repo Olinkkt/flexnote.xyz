@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Filter, BookOpen, Clock, ChevronRight, Plus } from 'lucide-react';
+import { Search, Filter, BookOpen, Clock, ChevronRight, Plus, Download } from 'lucide-react';
 import { NoteItem, SubjectMeta, SubjectType } from '../types/notes';
 import { playPopSound } from '../utils/audio';
 import { SubjectIcon } from './SubjectIcon';
@@ -11,6 +11,7 @@ interface NotesLibraryViewProps {
   onSelectSubject: (s: SubjectType) => void;
   onSelectNote: (note: NoteItem) => void;
   onOpenScan: () => void;
+  onOpenExport?: () => void;
 }
 
 export const NotesLibraryView: React.FC<NotesLibraryViewProps> = ({
@@ -20,6 +21,7 @@ export const NotesLibraryView: React.FC<NotesLibraryViewProps> = ({
   onSelectSubject,
   onSelectNote,
   onOpenScan,
+  onOpenExport,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -34,16 +36,31 @@ export const NotesLibraryView: React.FC<NotesLibraryViewProps> = ({
 
   return (
     <div className="p-4 select-none">
-      {/* Search Input Bar */}
-      <div className="relative mb-3">
-        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-duoGray-faded" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Hledat v zápiscích, vzorcích a tématech..."
-          className="w-full pl-9 pr-4 py-2.5 rounded-2xl bg-white border-2 border-duoGray-border focus:border-sparkBlue focus:outline-none text-xs font-bold text-duoGray-charcoal placeholder:text-duoGray-faded shadow-xs"
-        />
+      {/* Search Input Bar & Export Button */}
+      <div className="flex items-center gap-2 mb-3">
+        <div className="relative flex-1">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-duoGray-faded" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Hledat v zápiscích, vzorcích a tématech..."
+            className="w-full pl-9 pr-4 py-2.5 rounded-2xl bg-white border-2 border-duoGray-border focus:border-sparkBlue focus:outline-hidden text-xs font-bold text-duoGray-charcoal placeholder:text-duoGray-faded shadow-xs"
+          />
+        </div>
+
+        {onOpenExport && (
+          <button
+            onClick={() => {
+              playPopSound();
+              onOpenExport();
+            }}
+            title="Exportovat všechny zápisky do Markdownu (.md)"
+            className="p-2.5 rounded-2xl bg-white border-2 border-duoGray-border hover:border-sparkBlue hover:bg-sparkBlue-tint text-duoGray-charcoal hover:text-sparkBlue active:scale-95 transition shadow-xs shrink-0 cursor-pointer"
+          >
+            <Download size={18} />
+          </button>
+        )}
       </div>
 
       {/* Horizontal Subject Pills */}

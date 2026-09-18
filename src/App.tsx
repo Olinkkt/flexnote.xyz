@@ -29,6 +29,7 @@ import { Toast } from './components/Toast';
 import { AuthScreen } from './components/AuthScreen';
 import { ConfirmEmailScreen } from './components/ConfirmEmailScreen';
 import { ProfileView } from './components/ProfileView';
+import { ExportNotesModal } from './components/ExportNotesModal';
 
 const STORAGE_KEY = 'duo_notes_v1_data';
 
@@ -54,6 +55,7 @@ export const App: React.FC = () => {
   const [authLoading, setAuthLoading] = useState(true);
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
   const [syncToast, setSyncToast] = useState<{ title: string; message: string } | null>(null);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
   const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(() => {
     try {
       return localStorage.getItem('flexnote_unconfirmed_email');
@@ -336,6 +338,7 @@ export const App: React.FC = () => {
                 onSelectSubject={setSelectedSubject}
                 onSelectNote={(note) => setSelectedNote(note)}
                 onOpenScan={() => setScanModalOpen(true)}
+                onOpenExport={() => setExportModalOpen(true)}
               />
             )}
 
@@ -346,6 +349,7 @@ export const App: React.FC = () => {
                 totalNotes={notes.length}
                 onSignOut={handleSignOut}
                 onUpdateProfile={(updated) => setUserProfile(updated)}
+                onOpenExport={() => setExportModalOpen(true)}
               />
             )}
           </main>
@@ -374,6 +378,17 @@ export const App: React.FC = () => {
               onClose={() => setSelectedNote(null)}
               onDeleteNote={handleDeleteNote}
               onUpdateNote={handleUpdateNote}
+            />
+          )}
+
+          {/* Export All Notes Modal */}
+          {exportModalOpen && (
+            <ExportNotesModal
+              notes={notes}
+              profile={userProfile}
+              userEmail={user?.email || ''}
+              onClose={() => setExportModalOpen(false)}
+              onShowToast={(title, message) => setSyncToast({ title, message })}
             />
           )}
         </>

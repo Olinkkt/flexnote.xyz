@@ -14,6 +14,8 @@ import {
   GraduationCap,
   CheckCircle2,
   XCircle,
+  Download,
+  ChevronRight,
 } from 'lucide-react';
 import { UserProfile, signOutUser, updateUserProfile, checkUsernameAvailability } from '../services/supabase';
 import { playPopSound, playSuccessChime } from '../utils/audio';
@@ -24,6 +26,7 @@ interface ProfileViewProps {
   totalNotes: number;
   onSignOut: () => void;
   onUpdateProfile?: (updated: UserProfile) => void;
+  onOpenExport?: () => void;
 }
 
 const GRADE_CATEGORIES = [
@@ -49,6 +52,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   totalNotes,
   onSignOut,
   onUpdateProfile,
+  onOpenExport,
 }) => {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [fullName, setFullName] = useState(profile?.full_name || '');
@@ -277,6 +281,35 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           Online
         </span>
       </div>
+
+      {/* Export All Notes Card */}
+      {onOpenExport && (
+        <button
+          onClick={() => {
+            playPopSound();
+            onOpenExport();
+          }}
+          className="w-full duo-card p-3.5 bg-white hover:bg-gray-50/80 flex items-center justify-between group transition active:scale-98 cursor-pointer text-left shadow-xs"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-sparkBlue-tint text-sparkBlue flex items-center justify-center shrink-0 border-2 border-sparkBlue/30 shadow-xs">
+              <Download size={20} className="stroke-[2.5]" />
+            </div>
+            <div>
+              <div className="font-feather font-black text-xs text-duoGray-charcoal flex items-center gap-1.5">
+                <span>Exportovat všechny zápisky</span>
+                <span className="text-[10px] font-feather font-black px-1.5 py-0.2 rounded-md bg-storybookGreen text-eagerGreen-dark border border-eagerGreen/40">
+                  .MD
+                </span>
+              </div>
+              <p className="text-[11px] font-bold text-duoGray-pencil mt-0.5">
+                Stažení do zařízení nebo odeslání na e-mail
+              </p>
+            </div>
+          </div>
+          <ChevronRight size={18} className="text-duoGray-pencil group-hover:text-sparkBlue group-hover:translate-x-0.5 transition shrink-0" />
+        </button>
+      )}
 
       {/* Sign Out Button */}
       <button

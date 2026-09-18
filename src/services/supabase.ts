@@ -420,3 +420,35 @@ export async function uploadNoteImage(
   return publicUrlData.publicUrl;
 }
 
+/**
+ * Call the send-notes-export Edge Function to email notes to the student
+ */
+export async function sendNotesExportEmail(params: {
+  userEmail: string;
+  userName: string;
+  notesCount: number;
+  markdown: string;
+}): Promise<{ success: boolean; needsConfig?: boolean; message?: string; error?: string }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('send-notes-export', {
+      body: params,
+    });
+
+    if (error) {
+      console.warn('Edge function invoke error:', error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+
+    return data || { success: false, error: 'Prázdná odpověď od e-mailové služby.' };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    return {
+      success: false,
+      error: message,
+    };
+  }
+}
+
