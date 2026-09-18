@@ -73,7 +73,7 @@ Cíl: Umožnit studentům efektivně se učit přímo z jejich zdigitalizovanýc
 
 ---
 
-## ⚡ Verze 4: Gamifikace, Dopaminová smyčka & Žebříčky
+## ⚡ Verze 4: Gamifikace, Dopaminová smyčka & Žebříčky (Hotovo ✅)
 Cíl: Udělat z učení návykovou aktivitu plnou dopaminu, kde spolu studenti mohou soutěžit a předhánět se.
 
 1. **Dopaminový výukový systém (Fun & Effective)**:
@@ -85,7 +85,7 @@ Cíl: Udělat z učení návykovou aktivitu plnou dopaminu, kde spolu studenti m
    - Získávání drahokamů (Diamonds) výhradně za poctivé studium, úspěšné testy a udržení série.
 4. **Soutěžení a flexení (Leaderboards & Friend Leagues)**:
    - Týdenní a celkové žebříčky mezi spolužáky a přáteli.
-   - Možnost „flexit“ se:
+   - Možnost „flexit“:
      - Celkovým časem věnovaným studiu tento týden.
      - Počtem nasbíraných drahokamů.
      - Nejdelší nepřerušenou sérií (Study Streak).

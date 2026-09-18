@@ -1,6 +1,6 @@
 import { createClient, User } from '@supabase/supabase-js';
 import { Database } from '../types/database.types';
-import { NoteItem, SubjectType } from '../types/notes';
+import { NoteItem, SubjectType, LeaderboardEntry, LeaderboardMetric, LeaderboardTimeframe } from '../types/notes';
 
 export type { User };
 
@@ -252,8 +252,13 @@ export interface UserProfile {
   grade: string | null;
   avatar_url: string | null;
   streak_days: number | null;
+  best_streak: number | null;
+  streak_freezes: number | null;
   diamonds: number | null;
+  weekly_diamonds: number | null;
   study_time_seconds: number | null;
+  weekly_study_seconds: number | null;
+  last_study_date: string | null;
 }
 
 /**
@@ -484,4 +489,274 @@ export async function sendNotesExportEmail(params: {
     };
   }
 }
+
+/**
+ * Update gamification metrics for a user (streak, diamonds, study time)
+ */
+export async function updateUserGamification(
+  userId: string,
+  updates: Partial<Pick<UserProfile, 'streak_days' | 'best_streak' | 'streak_freezes' | 'diamonds' | 'weekly_diamonds' | 'study_time_seconds' | 'weekly_study_seconds' | 'last_study_date'>>
+): Promise<UserProfile | null> {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      console.warn('Failed to update gamification in cloud:', error.message);
+      return null;
+    }
+    return data as UserProfile;
+  } catch (err) {
+    console.warn('Network error updating gamification in cloud:', err);
+    return null;
+  }
+}
+
+/**
+ * Buy a streak freeze with 50 diamonds
+ */
+export async function purchaseStreakFreeze(
+  userId: string,
+  currentDiamonds: number,
+  currentFreezes: number
+): Promise<{ success: boolean; newDiamonds?: number; newFreezes?: number; error?: string }> {
+  if (currentDiamonds < 50) {
+    return { success: false, error: 'Nemáš dostatek drahokamů (potřebuješ 50 💎).' };
+  }
+
+  try {
+    const newDiamonds = currentDiamonds - 50;
+    const newFreezes = (currentFreezes || 0) + 1;
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        diamonds: newDiamonds,
+        streak_freezes: newFreezes,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', userId);
+
+    if (error) throw error;
+
+    return {
+      success: true,
+      newDiamonds,
+      newFreezes,
+    };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { success: false, error: message };
+  }
+}
+
+// Realistic leaderboard seed fallback when database has few users or offline
+const MOCK_LEADERBOARD_STUDENTS: Omit<LeaderboardEntry, 'rank'>[] = [
+  {
+    id: 'mock-1',
+    username: 'matej_neruda',
+    fullName: 'Matěj Procházka',
+    avatarUrl: null,
+    school: 'Gymnázium Jana Nerudy',
+    grade: '3. ročník',
+    studyTimeSeconds: 43200,
+    weeklyStudySeconds: 12600,
+    diamonds: 420,
+    weeklyDiamonds: 180,
+    streakDays: 14,
+  },
+  {
+    id: 'mock-2',
+    username: 'eliska_bio',
+    fullName: 'Eliška Nováková',
+    avatarUrl: null,
+    school: 'Gymnázium Botičská',
+    grade: '2. ročník',
+    studyTimeSeconds: 38400,
+    weeklyStudySeconds: 11400,
+    diamonds: 380,
+    weeklyDiamonds: 160,
+    streakDays: 11,
+  },
+  {
+    id: 'mock-3',
+    username: 'tomas_it',
+    fullName: 'Tomáš Dvořák',
+    avatarUrl: null,
+    school: 'SPŠ sdělovací techniky',
+    grade: '4. ročník',
+    studyTimeSeconds: 32100,
+    weeklyStudySeconds: 9800,
+    diamonds: 310,
+    weeklyDiamonds: 135,
+    streakDays: 9,
+  },
+  {
+    id: 'mock-4',
+    username: 'anicka_s',
+    fullName: 'Anna Svobodová',
+    avatarUrl: null,
+    school: 'Gymnázium Jana Nerudy',
+    grade: '3. ročník',
+    studyTimeSeconds: 27900,
+    weeklyStudySeconds: 8400,
+    diamonds: 290,
+    weeklyDiamonds: 120,
+    streakDays: 8,
+  },
+  {
+    id: 'mock-5',
+    username: 'filip_chem',
+    fullName: 'Filip Kučera',
+    avatarUrl: null,
+    school: 'Gymnázium Christiana Dopplera',
+    grade: 'Prima',
+    studyTimeSeconds: 21600,
+    weeklyStudySeconds: 6900,
+    diamonds: 240,
+    weeklyDiamonds: 95,
+    streakDays: 6,
+  },
+  {
+    id: 'mock-6',
+    username: 'klarka_m',
+    fullName: 'Klára Marková',
+    avatarUrl: null,
+    school: 'Gymnázium Botičská',
+    grade: 'Sekunda',
+    studyTimeSeconds: 18000,
+    weeklyStudySeconds: 5400,
+    diamonds: 190,
+    weeklyDiamonds: 80,
+    streakDays: 5,
+  },
+  {
+    id: 'mock-7',
+    username: 'david_czech',
+    fullName: 'David Černý',
+    avatarUrl: null,
+    school: 'SPŠ sdělovací techniky',
+    grade: '2. ročník',
+    studyTimeSeconds: 14400,
+    weeklyStudySeconds: 4200,
+    diamonds: 150,
+    weeklyDiamonds: 65,
+    streakDays: 4,
+  },
+  {
+    id: 'mock-8',
+    username: 'lucie_h',
+    fullName: 'Lucie Horáková',
+    avatarUrl: null,
+    school: 'Gymnázium Jana Keplera',
+    grade: '1. ročník',
+    studyTimeSeconds: 9600,
+    weeklyStudySeconds: 3100,
+    diamonds: 110,
+    weeklyDiamonds: 45,
+    streakDays: 3,
+  },
+];
+
+/**
+ * Fetch leaderboard entries according to metric, timeframe, and optional school filter
+ */
+export async function fetchLeaderboard(
+  metric: LeaderboardMetric,
+  timeframe: LeaderboardTimeframe,
+  schoolFilter?: string | null,
+  currentUserId?: string
+): Promise<LeaderboardEntry[]> {
+  try {
+    let query = supabase.from('profiles').select('*');
+
+    if (schoolFilter && schoolFilter.trim()) {
+      query = query.eq('school', schoolFilter.trim());
+    }
+
+    const sortColumn =
+      metric === 'study_time'
+        ? timeframe === 'weekly' ? 'weekly_study_seconds' : 'study_time_seconds'
+        : metric === 'diamonds'
+        ? timeframe === 'weekly' ? 'weekly_diamonds' : 'diamonds'
+        : 'streak_days';
+
+    query = query.order(sortColumn, { ascending: false }).limit(50);
+
+    const { data, error } = await query;
+
+    let entries: LeaderboardEntry[] = [];
+
+    if (!error && data && data.length > 0) {
+      entries = data.map((row) => ({
+        id: row.id,
+        username: row.username || row.full_name?.split(' ')[0]?.toLowerCase() || 'student',
+        fullName: row.full_name,
+        avatarUrl: row.avatar_url,
+        school: row.school,
+        grade: row.grade,
+        studyTimeSeconds: row.study_time_seconds || 0,
+        weeklyStudySeconds: row.weekly_study_seconds || 0,
+        diamonds: row.diamonds || 0,
+        weeklyDiamonds: row.weekly_diamonds || 0,
+        streakDays: row.streak_days || 0,
+        rank: 0,
+        isCurrentUser: currentUserId ? row.id === currentUserId : false,
+      }));
+    }
+
+    // If database has few users, merge mock students (excluding any matching current user or usernames)
+    if (entries.length < 5) {
+      const existingUsernames = new Set(entries.map((e) => e.username.toLowerCase()));
+      const filteredMock = MOCK_LEADERBOARD_STUDENTS
+        .filter((m) => !schoolFilter || m.school?.toLowerCase() === schoolFilter.toLowerCase())
+        .filter((m) => !existingUsernames.has(m.username.toLowerCase()))
+        .map((m) => ({
+          ...m,
+          rank: 0,
+          isCurrentUser: false,
+        }));
+
+      entries = [...entries, ...filteredMock];
+    }
+
+    // Sort entries according to metric & timeframe
+    entries.sort((a, b) => {
+      if (metric === 'study_time') {
+        const valA = timeframe === 'weekly' ? a.weeklyStudySeconds : a.studyTimeSeconds;
+        const valB = timeframe === 'weekly' ? b.weeklyStudySeconds : b.studyTimeSeconds;
+        return valB - valA;
+      }
+      if (metric === 'diamonds') {
+        const valA = timeframe === 'weekly' ? a.weeklyDiamonds : a.diamonds;
+        const valB = timeframe === 'weekly' ? b.weeklyDiamonds : b.diamonds;
+        return valB - valA;
+      }
+      return b.streakDays - a.streakDays;
+    });
+
+    // Assign 1-indexed ranks
+    return entries.map((item, idx) => ({
+      ...item,
+      rank: idx + 1,
+    }));
+  } catch (err) {
+    console.warn('Leaderboard fetch failed, falling back to cached/mock list:', err);
+    // Return mock sorted
+    const entries = MOCK_LEADERBOARD_STUDENTS.map((m) => ({
+      ...m,
+      rank: 0,
+      isCurrentUser: currentUserId ? m.id === currentUserId : false,
+    }));
+    return entries.map((item, idx) => ({ ...item, rank: idx + 1 }));
+  }
+}
+
 

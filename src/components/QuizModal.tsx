@@ -10,11 +10,24 @@ import {
   ArrowRight,
   HelpCircle,
   Award,
-  AlertCircle
+  AlertCircle,
+  Flame,
+  Zap,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { NoteItem, SubjectMeta, QuizQuestion, QuizData, TopicGroup } from '../types/notes';
-import { playPopSound, playSuccessChime, playStreakSound, playErrorSound } from '../utils/audio';
+import {
+  playPopSound,
+  playSuccessChime,
+  playStreakSound,
+  playErrorSound,
+  playComboChime,
+  playStreakCelebrationSound,
+} from '../utils/audio';
+import { vibrateSuccess, vibrateCombo, vibrateError } from '../utils/haptics';
+import { recordStudyActivity } from '../services/gamification';
+import { useActiveStudyTracker } from '../services/studyTracker';
+import { ComboBadge } from './DopamineBadge';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { SubjectIcon } from './SubjectIcon';
 import { generateQuizForNote, generateQuizForTopic } from '../services/quiz';
@@ -23,6 +36,7 @@ interface QuizModalProps {
   note?: NoteItem;
   topicGroup?: TopicGroup;
   subjects: SubjectMeta[];
+  userId?: string;
   onClose: () => void;
   onUpdateQuiz: (quiz: QuizData) => Promise<void> | void;
 }
@@ -31,6 +45,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
   note,
   topicGroup,
   subjects,
+  userId,
   onClose,
   onUpdateQuiz,
 }) => {
@@ -41,8 +56,13 @@ export const QuizModal: React.FC<QuizModalProps> = ({
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [isCompleted, setIsCompleted] = useState(false);
 
-  // Score tracking
+  // Score & Combo tracking
   const [correctCount, setCorrectCount] = useState(0);
+  const [comboCount, setComboCount] = useState(0);
+  const [earnedDiamonds, setEarnedDiamonds] = useState(0);
+
+  // Active study tracker for quiz practice session
+  useActiveStudyTracker(!isCompleted && !isGenerating, { userId, contextName: 'quiz' });
 
   // Answer state for current question
   const [selectedChoice, setSelectedChoice] = useState<number | null>(null);
@@ -191,11 +211,28 @@ export const QuizModal: React.FC<QuizModalProps> = ({
         setIsAnswerChecked(true);
         setIsAnswerCorrect(true);
         setCorrectCount((prev) => prev + 1);
-        playSuccessChime();
+        const nextCombo = comboCount + 1;
+        setComboCount(nextCombo);
+        playComboChime(nextCombo);
+        if (nextCombo >= 3) {
+          vibrateCombo();
+          try {
+            confetti({
+              particleCount: 30,
+              spread: 60,
+              origin: { y: 0.7 },
+              colors: ['#58cc02', '#1cb0f6', '#ff9600'],
+            });
+          } catch {}
+        } else {
+          vibrateSuccess();
+        }
       }
     } else {
       // Mismatch!
+      setComboCount(0);
       playErrorSound();
+      vibrateError();
       const mismatchSet = new Set<string>([leftId, rightId]);
       setMismatchIds(mismatchSet);
       setTimeout(() => {
@@ -228,9 +265,28 @@ export const QuizModal: React.FC<QuizModalProps> = ({
 
     if (correct) {
       setCorrectCount((prev) => prev + 1);
-      playSuccessChime();
+      const nextCombo = comboCount + 1;
+      setComboCount(nextCombo);
+      playComboChime(nextCombo);
+      if (nextCombo >= 3) {
+        vibrateCombo();
+        if (nextCombo === 3 || nextCombo === 5 || nextCombo === 10) {
+          try {
+            confetti({
+              particleCount: 35,
+              spread: 65,
+              origin: { y: 0.7 },
+              colors: ['#58cc02', '#1cb0f6', '#ff9600', '#ffd900'],
+            });
+          } catch {}
+        }
+      } else {
+        vibrateSuccess();
+      }
     } else {
+      setComboCount(0);
       playErrorSound();
+      vibrateError();
     }
   };
 
@@ -252,18 +308,27 @@ export const QuizModal: React.FC<QuizModalProps> = ({
         lastAttemptAt: Date.now(),
       });
 
+      const diamondsAwarded = totalScorePercent === 100 ? 25 : totalScorePercent >= 70 ? 15 : 10;
+      setEarnedDiamonds(diamondsAwarded);
+
+      recordStudyActivity({
+        diamondsToAdd: diamondsAwarded,
+        userId,
+      });
+
       setIsCompleted(true);
-      playStreakSound();
+      playStreakCelebrationSound();
+      vibrateSuccess();
       try {
         confetti({
-          particleCount: 100,
-          spread: 80,
+          particleCount: 110,
+          spread: 85,
           origin: { y: 0.6 },
           colors: ['#58cc02', '#1cb0f6', '#ff9600', '#ff4b4b', '#ffd900'],
         });
       } catch {}
     }
-  }, [currentIndex, questions.length, correctCount, existingBestScore, onUpdateQuiz]);
+  }, [currentIndex, questions.length, correctCount, existingBestScore, onUpdateQuiz, userId]);
 
   // Can the user submit their answer?
   const canCheck = useMemo(() => {
@@ -297,7 +362,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
             </button>
 
             {/* Duolingo style animated progress bar */}
-            <div className="flex-1 min-w-[120px] sm:min-w-[200px]">
+            <div className="flex-1 min-w-[100px] sm:min-w-[180px]">
               <div className="w-full h-3.5 bg-gray-200 rounded-full overflow-hidden p-0.5 border border-gray-300">
                 <div
                   className="h-full bg-eagerGreen rounded-full transition-all duration-300 ease-out"
@@ -305,6 +370,11 @@ export const QuizModal: React.FC<QuizModalProps> = ({
                 />
               </div>
             </div>
+
+            {/* Combo Badge in Header */}
+            {comboCount >= 2 && !isCompleted && !isGenerating && (
+              <ComboBadge combo={comboCount} />
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -382,6 +452,12 @@ export const QuizModal: React.FC<QuizModalProps> = ({
               <h2 className="font-feather font-black text-2xl text-duoGray-charcoal mb-1">
                 Test dokončen!
               </h2>
+
+              {/* Diamond Reward Pill */}
+              <div className="my-2 inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-sparkBlue/10 border-2 border-sparkBlue/30 text-sparkBlue font-feather font-black text-sm shadow-xs animate-bounce">
+                <Sparkles size={18} className="fill-sparkBlue" />
+                <span>+{earnedDiamonds} Drahokamů získáno! 💎</span>
+              </div>
 
               {/* Score Display */}
               <div className="my-5 p-4 rounded-2xl bg-gradient-to-br from-green-50 to-blue-50 border-2 border-duoGray-border w-full max-w-xs text-center">

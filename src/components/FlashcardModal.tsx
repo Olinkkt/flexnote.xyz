@@ -14,7 +14,17 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { FlashcardItem, NoteItem, SubjectMeta, TopicGroup, SubjectType } from '../types/notes';
-import { playPopSound, playSuccessChime } from '../utils/audio';
+import {
+  playPopSound,
+  playSuccessChime,
+  playErrorSound,
+  playComboChime,
+  playStreakCelebrationSound,
+} from '../utils/audio';
+import { vibrateSuccess, vibrateCombo, vibrateError } from '../utils/haptics';
+import { recordStudyActivity } from '../services/gamification';
+import { useActiveStudyTracker } from '../services/studyTracker';
+import { ComboBadge } from './DopamineBadge';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { SubjectIcon } from './SubjectIcon';
 import { generateFlashcardsForNote, generateFlashcardsForTopic } from '../services/flashcards';
@@ -33,6 +43,7 @@ interface FlashcardModalProps {
   customSessionTitle?: string;
   customSubjectId?: SubjectType;
   subjects: SubjectMeta[];
+  userId?: string;
   onClose: () => void;
   onUpdateFlashcards: (noteId: string, flashcards: FlashcardItem[]) => Promise<void> | void;
 }
@@ -44,6 +55,7 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
   customSessionTitle,
   customSubjectId,
   subjects,
+  userId,
   onClose,
   onUpdateFlashcards,
 }) => {
@@ -60,6 +72,11 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [isCompleted, setIsCompleted] = useState(false);
   const [masteredIds, setMasteredIds] = useState<Set<string>>(new Set());
+  const [comboCount, setComboCount] = useState(0);
+  const [earnedDiamonds, setEarnedDiamonds] = useState(0);
+
+  // Active study tracker for flashcard session
+  useActiveStudyTracker(!isCompleted && !isGenerating, { userId, contextName: 'flashcards' });
 
   const subjectId = customSubjectId || topicGroup?.subject || note?.subject || 'czech';
   const subjectMeta = subjects.find((s) => s.id === subjectId) || subjects[0];
@@ -123,7 +140,14 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
     } else {
       // Completed all cards!
       setIsCompleted(true);
-      playSuccessChime();
+      const rewardDiamonds = 10;
+      setEarnedDiamonds(rewardDiamonds);
+      recordStudyActivity({
+        diamondsToAdd: rewardDiamonds,
+        userId,
+      });
+      playStreakCelebrationSound();
+      vibrateSuccess();
       try {
         confetti({
           particleCount: 90,
@@ -133,7 +157,7 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
         });
       } catch {}
     }
-  }, [cards.length, currentIndex]);
+  }, [cards.length, currentIndex, userId]);
 
   const handlePrev = useCallback(() => {
     if (currentIndex > 0) {
@@ -156,8 +180,19 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
     const newMastered = new Set(masteredIds);
     if (rating === 'again') {
       newMastered.delete(currentCard.id);
+      setComboCount(0);
+      playErrorSound();
+      vibrateError();
     } else {
       newMastered.add(currentCard.id);
+      const nextCombo = comboCount + 1;
+      setComboCount(nextCombo);
+      playComboChime(nextCombo);
+      if (nextCombo >= 3) {
+        vibrateCombo();
+      } else {
+        vibrateSuccess();
+      }
     }
     setMasteredIds(newMastered);
 
@@ -264,13 +299,16 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
 
         {/* Progress Bar Strip */}
         {cards.length > 0 && !isGenerating && !generationError && (
-          <div className="px-4 py-2.5 bg-white border-b border-duoGray-border flex items-center gap-3">
+          <div className="px-4 py-2.5 bg-white border-b border-duoGray-border flex items-center justify-between gap-3">
             <div className="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden border border-gray-300/60 p-0.5">
               <div
                 className="bg-eagerGreen h-full rounded-full transition-all duration-300 shadow-xs"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
+            {comboCount >= 2 && !isCompleted && (
+              <ComboBadge combo={comboCount} />
+            )}
             <span className="text-xs font-feather font-black text-duoGray-pencil tracking-tight shrink-0">
               {currentIndex + 1} / {cards.length}
             </span>
@@ -321,6 +359,12 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
               <h2 className="font-feather font-black text-xl text-duoGray-charcoal mb-1">
                 Skvělá práce! 🎉
               </h2>
+
+              {/* Diamond Reward */}
+              <div className="my-2 inline-flex items-center gap-2 px-4 py-1.5 rounded-2xl bg-sparkBlue/10 border-2 border-sparkBlue/30 text-sparkBlue font-feather font-black text-xs shadow-xs animate-bounce">
+                <Sparkles size={16} className="fill-sparkBlue" />
+                <span>+{earnedDiamonds} Drahokamů získáno! 💎</span>
+              </div>
               <p className="text-xs font-bold text-duoGray-pencil mb-4">
                 Prošel(a) jsi všech {cards.length} kartiček z tématu „{displayTitle}“.
               </p>

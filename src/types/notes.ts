@@ -134,3 +134,34 @@ export interface UserStats {
   dailyGoal: number;
   hearts: number;
 }
+
+export type LeaderboardTimeframe = 'weekly' | 'all-time';
+export type LeaderboardMetric = 'study_time' | 'diamonds' | 'streak';
+
+export interface LeaderboardEntry {
+  id: string;
+  username: string;
+  fullName: string | null;
+  avatarUrl: string | null;
+  school: string | null;
+  grade: string | null;
+  studyTimeSeconds: number;
+  weeklyStudySeconds: number;
+  diamonds: number;
+  weeklyDiamonds: number;
+  streakDays: number;
+  rank: number;
+  isCurrentUser?: boolean;
+}
+
+export interface GamificationState {
+  diamonds: number;
+  weeklyDiamonds: number;
+  streakDays: number;
+  bestStreak: number;
+  streakFreezes: number;
+  studyTimeSeconds: number;
+  weeklyStudySeconds: number;
+  lastStudyDate: string | null;
+}
+

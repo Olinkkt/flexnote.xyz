@@ -29,9 +29,12 @@ import { Toast } from './components/Toast';
 import { AuthScreen } from './components/AuthScreen';
 import { ConfirmEmailScreen } from './components/ConfirmEmailScreen';
 import { ProfileView } from './components/ProfileView';
+import { LeaderboardView } from './components/LeaderboardView';
+import { StreakModal } from './components/StreakModal';
 import { ExportNotesModal } from './components/ExportNotesModal';
 import { useOfflineSync, enqueueOfflineAction } from './services/offlineSync';
 import { OfflineBanner } from './components/OfflineBanner';
+import { useGamification } from './services/gamification';
 
 const STORAGE_KEY = 'duo_notes_v1_data';
 
@@ -60,6 +63,11 @@ export const App: React.FC = () => {
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
   const [syncToast, setSyncToast] = useState<{ title: string; message: string } | null>(null);
   const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [streakModalOpen, setStreakModalOpen] = useState(false);
+
+  // Central Gamification & Dopamine Loop State
+  const { gamification, buyStreakFreeze } = useGamification(userProfile, user?.id);
+
   const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(() => {
     try {
       return localStorage.getItem('flexnote_unconfirmed_email');
@@ -370,12 +378,15 @@ export const App: React.FC = () => {
         />
       ) : (
         <>
-          {/* Top Header with App Title on left and Class Switcher Dropdown on right */}
+          {/* Top Header with App Title on left, Streak and Diamonds in center, and Class Switcher Dropdown on right */}
           <TopHeader
             subjects={SUBJECTS}
             selectedSubject={selectedSubject}
             onSelectSubject={(subj) => setSelectedSubject(subj)}
             totalNotes={notes.length}
+            streakDays={gamification.streakDays}
+            diamonds={gamification.diamonds}
+            onOpenStreakModal={() => setStreakModalOpen(true)}
           />
 
           {/* Clean, flat offline status banner strip (strictly no pill shapes) */}
@@ -409,6 +420,7 @@ export const App: React.FC = () => {
                 allNotes={notes}
                 subjects={SUBJECTS}
                 selectedSubject={selectedSubject}
+                userId={user?.id}
                 onUpdateFlashcards={async (noteId, flashcards) => {
                   await handleUpdateNote(noteId, { flashcards });
                 }}
@@ -419,14 +431,27 @@ export const App: React.FC = () => {
               />
             )}
 
+            {activeTab === 'leaderboard' && (
+              <LeaderboardView
+                user={user || { id: 'guest', email: 'Místní offline sešit' }}
+                profile={userProfile}
+                gamification={gamification}
+                onOpenProfile={() => setActiveTab('profile')}
+                onShowToast={(title, message) => setSyncToast({ title, message })}
+              />
+            )}
+
             {activeTab === 'profile' && (
               <ProfileView
                 user={user || { id: 'guest', email: 'Místní offline sešit' }}
                 profile={userProfile}
                 totalNotes={notes.length}
+                gamification={gamification}
                 onSignOut={handleSignOut}
                 onUpdateProfile={(updated) => setUserProfile(updated)}
                 onOpenExport={() => setExportModalOpen(true)}
+                onOpenStreakModal={() => setStreakModalOpen(true)}
+                onOpenLeaderboard={() => setActiveTab('leaderboard')}
                 isOnline={isOnline}
                 pendingSyncCount={pendingCount}
                 isSyncing={isSyncing}
@@ -457,9 +482,19 @@ export const App: React.FC = () => {
             <NoteDetailModal
               note={selectedNote}
               subjects={SUBJECTS}
+              userId={user?.id}
               onClose={() => setSelectedNote(null)}
               onDeleteNote={handleDeleteNote}
               onUpdateNote={handleUpdateNote}
+            />
+          )}
+
+          {/* Streak Details & Freeze Protection Modal */}
+          {streakModalOpen && (
+            <StreakModal
+              gamification={gamification}
+              onClose={() => setStreakModalOpen(false)}
+              onBuyFreeze={buyStreakFreeze}
             />
           )}
 

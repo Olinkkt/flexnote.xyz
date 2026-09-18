@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
-import { X, Copy, Check, BookOpen, Code2, Trash2, Pencil, Save, RotateCcw } from 'lucide-react';
+import { X, Copy, Check, BookOpen, Code2, Trash2, Pencil, Save, RotateCcw, Clock } from 'lucide-react';
 import { NoteItem, SubjectMeta } from '../types/notes';
 import { playPopSound, playSuccessChime } from '../utils/audio';
+import { useActiveStudyTracker } from '../services/studyTracker';
+import { DiamondEarnedToast } from './DopamineBadge';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { SubjectIcon } from './SubjectIcon';
 
 interface NoteDetailModalProps {
   note: NoteItem;
   subjects: SubjectMeta[];
+  userId?: string;
   onClose: () => void;
   onDeleteNote?: (noteId: string) => void;
   onUpdateNote?: (noteId: string, updates: Partial<NoteItem>) => Promise<void> | void;
@@ -16,6 +19,7 @@ interface NoteDetailModalProps {
 export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
   note,
   subjects,
+  userId,
   onClose,
   onDeleteNote,
   onUpdateNote,
@@ -27,6 +31,16 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
   const [editTopic, setEditTopic] = useState(note.topic || '');
   const [editMarkdown, setEditMarkdown] = useState(note.markdown);
   const [isSaving, setIsSaving] = useState(false);
+  const [diamondToast, setDiamondToast] = useState<number | null>(null);
+
+  const { formattedDuration } = useActiveStudyTracker(true, {
+    userId,
+    contextName: 'note',
+    onDiamondBonus: (amount) => {
+      setDiamondToast(amount);
+      setTimeout(() => setDiamondToast(null), 3500);
+    },
+  });
 
   const subjectMeta = subjects.find(s => s.id === note.subject) || subjects[0];
 
@@ -79,14 +93,23 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
               <span>{subjectMeta.czechName}</span>
             </span>
             {note.topic && (
-              <span className="text-[11px] font-bold text-sparkBlue bg-sparkBlue/10 px-2 py-0.5 rounded-lg border border-sparkBlue/20 truncate max-w-[130px]" title={`Téma: ${note.topic}`}>
+              <span className="text-[11px] font-bold text-sparkBlue bg-sparkBlue/10 px-2 py-0.5 rounded-lg border border-sparkBlue/20 truncate max-w-[110px]" title={`Téma: ${note.topic}`}>
                 {note.topic}
               </span>
             )}
-            <span className="text-[11px] font-bold text-duoGray-pencil">
-              {note.date}
+            <span className="text-[10px] font-feather font-extrabold text-duoGray-pencil bg-gray-100 px-1.5 py-0.5 rounded-md flex items-center gap-1 shrink-0" title="Aktivní čas studia tohoto zápisku">
+              <Clock size={11} className="text-duoGray-pencil" />
+              <span>{formattedDuration}</span>
             </span>
           </div>
+
+          {/* Diamond Earned Toast */}
+          {diamondToast && (
+            <DiamondEarnedToast
+              amount={diamondToast}
+              message="Soustředěné studium zápisku (2 min)"
+            />
+          )}
 
           <div className="flex items-center gap-1.5">
             {onUpdateNote && (

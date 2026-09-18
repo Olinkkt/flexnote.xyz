@@ -66,45 +66,60 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          best_streak: number | null
           created_at: string | null
           diamonds: number | null
           email: string | null
           full_name: string | null
           grade: string | null
           id: string
+          last_study_date: string | null
           school: string | null
           streak_days: number | null
+          streak_freezes: number | null
           study_time_seconds: number | null
           updated_at: string | null
           username: string | null
+          weekly_diamonds: number | null
+          weekly_study_seconds: number | null
         }
         Insert: {
           avatar_url?: string | null
+          best_streak?: number | null
           created_at?: string | null
           diamonds?: number | null
           email?: string | null
           full_name?: string | null
           grade?: string | null
           id: string
+          last_study_date?: string | null
           school?: string | null
           streak_days?: number | null
+          streak_freezes?: number | null
           study_time_seconds?: number | null
           updated_at?: string | null
           username?: string | null
+          weekly_diamonds?: number | null
+          weekly_study_seconds?: number | null
         }
         Update: {
           avatar_url?: string | null
+          best_streak?: number | null
           created_at?: string | null
           diamonds?: number | null
           email?: string | null
           full_name?: string | null
           grade?: string | null
           id?: string
+          last_study_date?: string | null
           school?: string | null
           streak_days?: number | null
+          streak_freezes?: number | null
           study_time_seconds?: number | null
           updated_at?: string | null
           username?: string | null
+          weekly_diamonds?: number | null
+          weekly_study_seconds?: number | null
         }
         Relationships: []
       }

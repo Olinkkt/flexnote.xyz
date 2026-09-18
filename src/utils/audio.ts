@@ -138,3 +138,102 @@ export function playErrorSound() {
   }
 }
 
+export function playComboChime(comboCount: number) {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    // Pitch scales with combo count (up to 7 steps)
+    const scale = [523.25, 587.33, 659.25, 783.99, 880.00, 1046.50, 1174.66];
+    const index = Math.min(Math.max(comboCount - 1, 0), scale.length - 1);
+    const baseFreq = scale[index];
+
+    // Play a delightful two-tone chime where the second note is an octave or harmonic above
+    [baseFreq, baseFreq * 1.25].forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = comboCount >= 4 ? 'sine' : 'triangle';
+      const startTime = now + idx * 0.08;
+
+      osc.frequency.setValueAtTime(freq, startTime);
+
+      gain.gain.setValueAtTime(0.16, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.22);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(startTime);
+      osc.stop(startTime + 0.24);
+    });
+  } catch {
+    // Ignore audio failures
+  }
+}
+
+export function playDiamondSound() {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    // Sparkly crystal arpeggio: B5 -> E6 -> G#6
+    const freqs = [987.77, 1318.51, 1661.22];
+    freqs.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      const startTime = now + idx * 0.06;
+
+      osc.frequency.setValueAtTime(freq, startTime);
+
+      gain.gain.setValueAtTime(0.12, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.18);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(startTime);
+      osc.stop(startTime + 0.2);
+    });
+  } catch {
+    // Ignore audio failures
+  }
+}
+
+export function playStreakCelebrationSound() {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    // Grand fanfare: C5, E5, G5, C6, E6
+    const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51];
+    notes.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = idx === notes.length - 1 ? 'triangle' : 'sine';
+      const startTime = now + idx * 0.08;
+      const duration = idx === notes.length - 1 ? 0.45 : 0.25;
+
+      osc.frequency.setValueAtTime(freq, startTime);
+
+      gain.gain.setValueAtTime(0.18, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(startTime);
+      osc.stop(startTime + duration + 0.02);
+    });
+  } catch {
+    // Ignore audio failures
+  }
+}
+
+

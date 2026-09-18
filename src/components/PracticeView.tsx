@@ -30,6 +30,7 @@ interface PracticeViewProps {
   allNotes: NoteItem[];
   subjects: SubjectMeta[];
   selectedSubject: SubjectType;
+  userId?: string;
   onUpdateFlashcards: (noteId: string, flashcards: FlashcardItem[]) => Promise<void> | void;
   onUpdateQuiz: (noteId: string, quiz: QuizData) => Promise<void> | void;
   onOpenScan: () => void;
@@ -39,6 +40,7 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
   notes,
   subjects,
   selectedSubject,
+  userId,
   onUpdateFlashcards,
   onUpdateQuiz,
   onOpenScan,
@@ -385,6 +387,7 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
           customSessionTitle={customSRSSession.title}
           customSubjectId={selectedSubject !== 'all' ? selectedSubject : undefined}
           subjects={subjects}
+          userId={userId}
           onClose={() => setCustomSRSSession(null)}
           onUpdateFlashcards={async (noteId, flashcards) => {
             await onUpdateFlashcards(noteId, flashcards);
@@ -397,6 +400,7 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
         <FlashcardModal
           topicGroup={activeTopicForCards}
           subjects={subjects}
+          userId={userId}
           onClose={() => setActiveTopicForCards(null)}
           onUpdateFlashcards={async (noteId, flashcards) => {
             await onUpdateFlashcards(noteId, flashcards);
@@ -409,6 +413,7 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
         <QuizModal
           topicGroup={activeTopicForQuiz}
           subjects={subjects}
+          userId={userId}
           onClose={() => setActiveTopicForQuiz(null)}
           onUpdateQuiz={async (quiz) => {
             for (const note of activeTopicForQuiz.notes) {
