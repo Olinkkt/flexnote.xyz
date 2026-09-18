@@ -557,114 +557,6 @@ export async function purchaseStreakFreeze(
   }
 }
 
-// Realistic leaderboard seed fallback when database has few users or offline
-const MOCK_LEADERBOARD_STUDENTS: Omit<LeaderboardEntry, 'rank'>[] = [
-  {
-    id: 'mock-1',
-    username: 'matej_neruda',
-    fullName: 'Matěj Procházka',
-    avatarUrl: null,
-    school: 'Gymnázium Jana Nerudy',
-    grade: '3. ročník',
-    studyTimeSeconds: 43200,
-    weeklyStudySeconds: 12600,
-    diamonds: 420,
-    weeklyDiamonds: 180,
-    streakDays: 14,
-  },
-  {
-    id: 'mock-2',
-    username: 'eliska_bio',
-    fullName: 'Eliška Nováková',
-    avatarUrl: null,
-    school: 'Gymnázium Botičská',
-    grade: '2. ročník',
-    studyTimeSeconds: 38400,
-    weeklyStudySeconds: 11400,
-    diamonds: 380,
-    weeklyDiamonds: 160,
-    streakDays: 11,
-  },
-  {
-    id: 'mock-3',
-    username: 'tomas_it',
-    fullName: 'Tomáš Dvořák',
-    avatarUrl: null,
-    school: 'SPŠ sdělovací techniky',
-    grade: '4. ročník',
-    studyTimeSeconds: 32100,
-    weeklyStudySeconds: 9800,
-    diamonds: 310,
-    weeklyDiamonds: 135,
-    streakDays: 9,
-  },
-  {
-    id: 'mock-4',
-    username: 'anicka_s',
-    fullName: 'Anna Svobodová',
-    avatarUrl: null,
-    school: 'Gymnázium Jana Nerudy',
-    grade: '3. ročník',
-    studyTimeSeconds: 27900,
-    weeklyStudySeconds: 8400,
-    diamonds: 290,
-    weeklyDiamonds: 120,
-    streakDays: 8,
-  },
-  {
-    id: 'mock-5',
-    username: 'filip_chem',
-    fullName: 'Filip Kučera',
-    avatarUrl: null,
-    school: 'Gymnázium Christiana Dopplera',
-    grade: 'Prima',
-    studyTimeSeconds: 21600,
-    weeklyStudySeconds: 6900,
-    diamonds: 240,
-    weeklyDiamonds: 95,
-    streakDays: 6,
-  },
-  {
-    id: 'mock-6',
-    username: 'klarka_m',
-    fullName: 'Klára Marková',
-    avatarUrl: null,
-    school: 'Gymnázium Botičská',
-    grade: 'Sekunda',
-    studyTimeSeconds: 18000,
-    weeklyStudySeconds: 5400,
-    diamonds: 190,
-    weeklyDiamonds: 80,
-    streakDays: 5,
-  },
-  {
-    id: 'mock-7',
-    username: 'david_czech',
-    fullName: 'David Černý',
-    avatarUrl: null,
-    school: 'SPŠ sdělovací techniky',
-    grade: '2. ročník',
-    studyTimeSeconds: 14400,
-    weeklyStudySeconds: 4200,
-    diamonds: 150,
-    weeklyDiamonds: 65,
-    streakDays: 4,
-  },
-  {
-    id: 'mock-8',
-    username: 'lucie_h',
-    fullName: 'Lucie Horáková',
-    avatarUrl: null,
-    school: 'Gymnázium Jana Keplera',
-    grade: '1. ročník',
-    studyTimeSeconds: 9600,
-    weeklyStudySeconds: 3100,
-    diamonds: 110,
-    weeklyDiamonds: 45,
-    streakDays: 3,
-  },
-];
-
 /**
  * Fetch leaderboard entries according to metric, timeframe, and optional school filter
  */
@@ -712,21 +604,6 @@ export async function fetchLeaderboard(
       }));
     }
 
-    // If database has few users, merge mock students (excluding any matching current user or usernames)
-    if (entries.length < 5) {
-      const existingUsernames = new Set(entries.map((e) => e.username.toLowerCase()));
-      const filteredMock = MOCK_LEADERBOARD_STUDENTS
-        .filter((m) => !schoolFilter || m.school?.toLowerCase() === schoolFilter.toLowerCase())
-        .filter((m) => !existingUsernames.has(m.username.toLowerCase()))
-        .map((m) => ({
-          ...m,
-          rank: 0,
-          isCurrentUser: false,
-        }));
-
-      entries = [...entries, ...filteredMock];
-    }
-
     // Sort entries according to metric & timeframe
     entries.sort((a, b) => {
       if (metric === 'study_time') {
@@ -748,15 +625,10 @@ export async function fetchLeaderboard(
       rank: idx + 1,
     }));
   } catch (err) {
-    console.warn('Leaderboard fetch failed, falling back to cached/mock list:', err);
-    // Return mock sorted
-    const entries = MOCK_LEADERBOARD_STUDENTS.map((m) => ({
-      ...m,
-      rank: 0,
-      isCurrentUser: currentUserId ? m.id === currentUserId : false,
-    }));
-    return entries.map((item, idx) => ({ ...item, rank: idx + 1 }));
+    console.error('Leaderboard fetch failed:', err);
+    return [];
   }
 }
+
 
 

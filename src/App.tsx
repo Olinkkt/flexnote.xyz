@@ -8,7 +8,7 @@ import { NoteDetailModal } from './components/NoteDetailModal';
 import { PracticeView } from './components/PracticeView';
 import { BottomNav, TabType } from './components/BottomNav';
 
-import { SUBJECTS, INITIAL_NOTES } from './data/mockNotes';
+import { SUBJECTS } from './data/subjects';
 import { NoteItem, SubjectType } from './types/notes';
 import {
   supabase,
@@ -51,9 +51,9 @@ export const App: React.FC = () => {
         }
       }
     } catch {
-      // fallback to initial notes
+      // fallback
     }
-    return INITIAL_NOTES;
+    return [];
   });
   const [activeTab, setActiveTab] = useState<TabType>('notes');
 

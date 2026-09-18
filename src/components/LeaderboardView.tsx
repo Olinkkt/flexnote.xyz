@@ -59,7 +59,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
 
         // Ensure current user entry reflects latest local gamification numbers
         const currentUserId = user.id;
-        const mapped = data.map((entry) => {
+        let mapped = data.map((entry) => {
           if (entry.id === currentUserId || entry.isCurrentUser) {
             return {
               ...entry,
@@ -76,6 +76,26 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
           }
           return entry;
         });
+
+        // If current user is not in query results, add them with local stats (if matching school filter)
+        const hasCurrentUser = mapped.some((entry) => entry.id === currentUserId || entry.isCurrentUser);
+        if (!hasCurrentUser && (!filterSchool || (profile?.school && profile.school.trim().toLowerCase() === filterSchool.toLowerCase()))) {
+          mapped.push({
+            id: currentUserId,
+            username: profile?.username || user.email?.split('@')[0] || 'já',
+            fullName: profile?.full_name || null,
+            avatarUrl: profile?.avatar_url || null,
+            school: profile?.school || null,
+            grade: profile?.grade || null,
+            studyTimeSeconds: gamification.studyTimeSeconds,
+            weeklyStudySeconds: gamification.weeklyStudySeconds,
+            diamonds: gamification.diamonds,
+            weeklyDiamonds: gamification.weeklyDiamonds,
+            streakDays: gamification.streakDays,
+            rank: 0,
+            isCurrentUser: true,
+          });
+        }
 
         // Re-sort with merged current user numbers
         mapped.sort((a, b) => {
