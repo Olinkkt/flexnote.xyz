@@ -84,20 +84,6 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => {
-                playPopSound();
-                setShowFlashcards(true);
-              }}
-              title="Procvičit kartičky s 3D flip efektem"
-              className="px-2.5 py-1.5 rounded-duo border-2 border-duoGray-border hover:bg-sparkBlue-tint hover:border-sparkBlue text-duoGray-charcoal hover:text-sparkBlue transition active:scale-95 cursor-pointer flex items-center gap-1.5 shadow-xs"
-            >
-              <Sparkles size={15} className="text-sparkBlue shrink-0" />
-              <span className="text-xs font-feather font-black text-sparkBlue">
-                {note.flashcards && note.flashcards.length > 0 ? `${note.flashcards.length}` : 'Kartičky'}
-              </span>
-            </button>
-
             {onUpdateNote && (
               <button
                 onClick={() => {
@@ -183,6 +169,19 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                 <Code2 size={13} />
                 <span>Zdrojový kód</span>
               </button>
+
+              {note.flashcards && note.flashcards.length > 0 && (
+                <button
+                  onClick={() => {
+                    playPopSound();
+                    setShowFlashcards(true);
+                  }}
+                  className="px-3 py-1 rounded-duo text-xs font-feather font-extrabold flex items-center gap-1.5 transition bg-white text-sparkBlue hover:brightness-95 shadow-xs border-2 border-duoGray-border cursor-pointer active:scale-95"
+                >
+                  <Sparkles size={13} className="text-sparkBlue shrink-0" />
+                  <span>Kartičky ({note.flashcards.length})</span>
+                </button>
+              )}
             </div>
 
             <span className="text-[11px] font-bold text-duoGray-pencil">
@@ -232,51 +231,42 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                 </div>
               </div>
 
-              {/* Duolingo 3D Flashcards Banner */}
-              <div
-                onClick={() => {
-                  playPopSound();
-                  setShowFlashcards(true);
-                }}
-                className="duo-card duo-card-interactive p-3.5 mb-4 bg-gradient-to-r from-blue-50/70 via-green-50/50 to-white border-2 border-sparkBlue/35 hover:border-sparkBlue cursor-pointer flex items-center justify-between group transition-all"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-2xl bg-sparkBlue text-white flex items-center justify-center border-b-2 border-sparkBlue-dark shadow-xs group-hover:scale-105 transition-transform shrink-0">
-                    <Sparkles size={20} />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="font-feather font-black text-xs text-duoGray-charcoal flex items-center gap-1.5 truncate">
-                      <span>Chytré kartičky (Flashcards)</span>
-                      {note.flashcards && note.flashcards.length > 0 && (
-                        <span className="px-1.5 py-0.5 rounded-full bg-sparkBlue/15 text-sparkBlue text-[10px] font-extrabold shrink-0">
-                          {note.flashcards.length} ks
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-[11px] font-bold text-duoGray-pencil mt-0.5 truncate">
-                      {note.flashcards && note.flashcards.length > 0
-                        ? 'Procvičuj s 3D flip efektem a vzorci'
-                        : 'Generování jedním kliknutím pomocí AI'}
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
+              {/* Duolingo 3D Flashcards Banner - Only shown when flashcards are not yet created */}
+              {(!note.flashcards || note.flashcards.length === 0) && (
+                <div
+                  onClick={() => {
                     playPopSound();
                     setShowFlashcards(true);
                   }}
-                  className={`duo-btn text-[11px] font-black uppercase tracking-wider py-1.5 px-3 shrink-0 ml-2 ${
-                    note.flashcards && note.flashcards.length > 0
-                      ? 'duo-btn-blue'
-                      : 'duo-btn-green'
-                  }`}
+                  className="duo-card duo-card-interactive p-3.5 mb-4 bg-gradient-to-r from-blue-50/70 via-green-50/50 to-white border-2 border-sparkBlue/35 hover:border-sparkBlue cursor-pointer flex items-center justify-between group transition-all"
                 >
-                  {note.flashcards && note.flashcards.length > 0 ? 'Procvičit' : 'Vytvořit'}
-                </button>
-              </div>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-2xl bg-sparkBlue text-white flex items-center justify-center border-b-2 border-sparkBlue-dark shadow-xs group-hover:scale-105 transition-transform shrink-0">
+                      <Sparkles size={20} />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-feather font-black text-xs text-duoGray-charcoal truncate">
+                        Chytré kartičky (Flashcards)
+                      </div>
+                      <div className="text-[11px] font-bold text-duoGray-pencil mt-0.5 truncate">
+                        Generování jedním kliknutím pomocí AI
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      playPopSound();
+                      setShowFlashcards(true);
+                    }}
+                    className="duo-btn duo-btn-green text-[11px] font-black uppercase tracking-wider py-1.5 px-3 shrink-0 ml-2"
+                  >
+                    Vytvořit
+                  </button>
+                </div>
+              )}
 
               {/* Formatted Markdown with KaTeX math formula rendering */}
               <MarkdownRenderer content={note.markdown} />
