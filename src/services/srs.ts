@@ -30,6 +30,20 @@ export function calculateRetention(srs?: FlashcardSRS): number {
 }
 
 /**
+ * Checks whether two millisecond timestamps fall on the exact same local calendar date.
+ */
+export function isSameCalendarDay(t1?: number, t2?: number): boolean {
+  if (!t1 || !t2) return false;
+  const d1 = new Date(t1);
+  const d2 = new Date(t2);
+  return (
+    d1.getFullYear() === d2.getFullYear() &&
+    d1.getMonth() === d2.getMonth() &&
+    d1.getDate() === d2.getDate()
+  );
+}
+
+/**
  * Calculates the next SRS interval, easeFactor, and dueDate based on rating.
  */
 export function calculateNextSRS(
@@ -42,11 +56,14 @@ export function calculateNextSRS(
   const currentEase = currentSRS?.easeFactor || DEFAULT_EASE_FACTOR;
   const currentInterval = currentSRS?.interval || 1;
 
+  // Kontrola, zda již byla kartička dnes úspěšně procvičena
+  const reviewedToday = isSameCalendarDay(now, currentSRS?.lastReviewedAt);
+
   if (rating === 'again') {
-    // Student failed this card -> mark as lapse and reset interval
+    // Student u pojmu selhal -> zaznamenat lapse a nastavit opakování na 1 den
     const newLapses = lapses + 1;
     const newEase = Math.max(MIN_EASE_FACTOR, Number((currentEase - 0.2).toFixed(2)));
-    const interval = 1; // repeat tomorrow (or end of session)
+    const interval = 1; // zítra
 
     return {
       interval,
@@ -56,6 +73,20 @@ export function calculateNextSRS(
       lastReviewedAt: now,
       lapses: newLapses,
       stability: 1,
+    };
+  }
+
+  // Pokud již byla kartička dnes úspěšně zopakována (repetition > 0),
+  // další procvičování v tomtéž dni NESMÍ uměle navyšovat interval ani posouvat termín dále!
+  if (reviewedToday && currentRep > 0) {
+    return {
+      interval: currentInterval,
+      repetition: currentRep,
+      easeFactor: currentEase,
+      dueDate: currentSRS ? currentSRS.dueDate : now + currentInterval * ONE_DAY_MS,
+      lastReviewedAt: now,
+      lapses: 0,
+      stability: currentSRS?.stability || currentInterval,
     };
   }
 

@@ -23,7 +23,6 @@ import {
   calculateNextSRS,
   calculateRetention,
   isTroublesome,
-  previewNextInterval,
   SRSRating
 } from '../services/srs';
 
@@ -487,15 +486,10 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
               <button
                 onClick={handleMarkRepeat}
                 title="Neumím to!"
-                className="flex-1 duo-btn duo-btn-red py-2.5 px-2.5 text-xs font-feather font-black uppercase tracking-wider flex flex-col items-center justify-center cursor-pointer shadow-xs"
+                className="flex-1 duo-btn duo-btn-red py-3 px-3 text-xs font-feather font-black uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
               >
-                <div className="flex items-center gap-1.5">
-                  <X size={15} className="stroke-[3]" />
-                  <span>Neumím to!</span>
-                </div>
-                <span className="text-[9.5px] opacity-85 font-mono normal-case tracking-normal">
-                  ({previewNextInterval(currentCard?.srs, 'again')})
-                </span>
+                <X size={16} className="stroke-[3]" />
+                <span>Neumím to!</span>
               </button>
 
               <button
@@ -509,15 +503,10 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
               <button
                 onClick={handleMarkMastered}
                 title="Umím to!"
-                className="flex-1 duo-btn duo-btn-green py-2.5 px-2.5 text-xs font-feather font-black uppercase tracking-wider flex flex-col items-center justify-center cursor-pointer shadow-xs"
+                className="flex-1 duo-btn duo-btn-green py-3 px-3 text-xs font-feather font-black uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
               >
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 size={15} className="stroke-[2.5]" />
-                  <span>Umím to!</span>
-                </div>
-                <span className="text-[9.5px] opacity-85 font-mono normal-case tracking-normal">
-                  ({previewNextInterval(currentCard?.srs, 'good')})
-                </span>
+                <CheckCircle2 size={16} className="stroke-[2.5]" />
+                <span>Umím to!</span>
               </button>
             </div>
           </div>
