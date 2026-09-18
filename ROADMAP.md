@@ -109,3 +109,19 @@ Cíl: Herní systém odměn s otevíráním truhel a unikátními předměty pro
    - Vlastní tituly u jména (např. *Matematický mág*, *Knihomol*, *Noční sova*).
    - Alternativní barevné motivy pro zápisky a 3D karty.
    - Výměna nebo vystavení nejvzácnějších trofejí ve vitríně na profilu.
+
+---
+
+## 🏫 Verze 6: Třídy, Sdílení zápisků & Školní komunity (Classroom & Shared Notes)
+Cíl: Propojit spolužáky z téže školy a třídy, umožnit sdílení zdigitalizovaných sešitů a výběr školy z oficiální databáze MŠMT.
+
+1. **Databáze škol MŠMT v profilu**:
+   - Napojení na oficiální databázi českých škol (`schools.csv` z MŠMT) s inteligentním našeptávačem při úpravě profilu a dovedností.
+   - Vyhledávání a auto-complete výběr školy (např. *Gymnázium Jana Nerudy*, *SPŠ sdělovací techniky*, *Bratrská škola*).
+2. **Konkrétní třídy (např. 2.A, 2.GB, C1.A)**:
+   - Možnost vytvořit nebo se připojit ke konkrétní třídě na dané škole.
+   - Vstup do třídy pomocí unikátního sdíleného kódu (Class Join Code), e-mailové pozvánky nebo schválení.
+3. **Sdílené zápisky ve třídě (Classroom Shared Notes)**:
+   - Společný třídní feed zdigitalizovaných zápisků z jednotlivých předmětů.
+   - Uživatelé v jedné třídě mohou sdílet zdigitalizované zápisky ze sešitu se spolužáky, ukládat si je a společně se učit.
+
