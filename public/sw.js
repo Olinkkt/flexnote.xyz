@@ -1,11 +1,22 @@
-// Flexnote Service Worker (v2.5 Offline-First)
-const CACHE_NAME = 'flexnote-v2.5-cache';
+// Flexnote Service Worker (v2.6 Offline-First)
+const CACHE_NAME = 'flexnote-v2.6-cache';
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
   '/favicon.svg',
 ];
+
+// Helper to safely cache responses without throwing on unsupported schemes
+async function safeCachePut(req, resClone) {
+  try {
+    if (!req.url.startsWith('http://') && !req.url.startsWith('https://')) return;
+    const cache = await caches.open(CACHE_NAME);
+    await cache.put(req, resClone);
+  } catch {
+    // Ignore cache put errors (unsupported schemes, opaque cross-origin restrictions, etc.)
+  }
+}
 
 // Install Event: Precache app shell
 self.addEventListener('install', (event) => {
@@ -36,6 +47,12 @@ self.addEventListener('activate', (event) => {
 // Fetch Event: Offline-first caching strategy
 self.addEventListener('fetch', (event) => {
   const { request } = event;
+
+  // Strictly only process HTTP/HTTPS requests (ignores chrome-extension:, data:, blob:, etc.)
+  if (!request.url.startsWith('http://') && !request.url.startsWith('https://')) {
+    return;
+  }
+
   const url = new URL(request.url);
 
   // Skip non-GET requests and Supabase / OpenRouter API calls
@@ -50,8 +67,7 @@ self.addEventListener('fetch', (event) => {
       fetch(request)
         .then((response) => {
           if (response && response.status === 200) {
-            const responseClone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, responseClone));
+            safeCachePut(request, response.clone());
           }
           return response;
         })
@@ -80,8 +96,7 @@ self.addEventListener('fetch', (event) => {
         const fetchPromise = fetch(request)
           .then((networkResponse) => {
             if (networkResponse && networkResponse.status === 200) {
-              const responseClone = networkResponse.clone();
-              caches.open(CACHE_NAME).then((cache) => cache.put(request, responseClone));
+              safeCachePut(request, networkResponse.clone());
             }
             return networkResponse;
           })
@@ -100,8 +115,7 @@ self.addEventListener('fetch', (event) => {
         if (cached) return cached;
         return fetch(request).then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
-            const responseClone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, responseClone));
+            safeCachePut(request, networkResponse.clone());
           }
           return networkResponse;
         }).catch(() => new Response('', { status: 404, statusText: 'Offline' }));
@@ -115,8 +129,7 @@ self.addEventListener('fetch', (event) => {
     fetch(request)
       .then((response) => {
         if (response && response.status === 200) {
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, responseClone));
+          safeCachePut(request, response.clone());
         }
         return response;
       })
