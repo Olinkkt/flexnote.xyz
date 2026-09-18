@@ -112,9 +112,6 @@ export const RecentNotesList: React.FC<RecentNotesListProps> = ({
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       loading="lazy"
                     />
-                    <div className="absolute bottom-0 right-0 bg-duoGray-charcoal px-1.5 py-0.5 rounded-tl text-[8px] font-feather font-black text-white">
-                      .MD
-                    </div>
                   </div>
 
                   {/* Text details */}

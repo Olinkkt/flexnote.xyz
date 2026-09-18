@@ -312,7 +312,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote, userI
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-1.5 text-xs font-feather font-black text-duoGray-charcoal">
                     <FileText size={14} className="text-sparkBlue" />
-                    <span>{extractedData?.title || 'Náhled převedeného .md souboru'}</span>
+                    <span>{extractedData?.title || 'Náhled převedeného zápisku'}</span>
                   </div>
                 </div>
                 <div className="bg-[#f7f7f7] border-2 border-duoGray-border text-duoGray-charcoal p-2.5 rounded-xl font-mono text-[11px] max-h-36 overflow-y-auto">

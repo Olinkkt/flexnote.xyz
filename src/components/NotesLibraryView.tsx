@@ -55,7 +55,7 @@ export const NotesLibraryView: React.FC<NotesLibraryViewProps> = ({
               playPopSound();
               onOpenExport();
             }}
-            title="Exportovat všechny zápisky do Markdownu (.md)"
+            title="Exportovat všechny zápisky"
             className="p-2.5 rounded-2xl bg-white border-2 border-duoGray-border hover:border-sparkBlue hover:bg-sparkBlue-tint text-duoGray-charcoal hover:text-sparkBlue active:scale-95 transition shadow-xs shrink-0 cursor-pointer"
           >
             <Download size={18} />

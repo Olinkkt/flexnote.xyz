@@ -52,7 +52,7 @@ export const ExportNotesModal: React.FC<ExportNotesModalProps> = ({
     downloadMarkdownFile(markdown);
     playSuccessChime();
     setDownloaded(true);
-    onShowToast?.('Soubor stažen', `Všech ${totalNotes} zápisků bylo staženo ve formátu .md do zařízení.`);
+    onShowToast?.('Soubor stažen', `Všech ${totalNotes} zápisků bylo úspěšně staženo do zařízení.`);
     setTimeout(() => setDownloaded(false), 3000);
   };
 
@@ -121,7 +121,7 @@ export const ExportNotesModal: React.FC<ExportNotesModalProps> = ({
                 Exportovat zápisky
               </h3>
               <p className="text-[11px] font-bold text-duoGray-pencil">
-                Ucelený Markdown (.md) se vzorci
+                Všechny tvé zápisky přehledně se vzorci
               </p>
             </div>
           </div>
@@ -153,9 +153,6 @@ export const ExportNotesModal: React.FC<ExportNotesModalProps> = ({
                 </div>
               </div>
             </div>
-            <span className="px-2.5 py-1 rounded-duo bg-white border border-eagerGreen/40 text-[11px] font-feather font-black text-eagerGreen-dark shadow-xs">
-              .MD
-            </span>
           </div>
 
           {/* Option 1: Direct Download to Device */}
@@ -186,7 +183,7 @@ export const ExportNotesModal: React.FC<ExportNotesModalProps> = ({
               ) : (
                 <>
                   <Download size={16} />
-                  <span>Stáhnout .MD do zařízení</span>
+                  <span>Stáhnout do zařízení</span>
                 </>
               )}
             </button>
@@ -264,12 +261,12 @@ export const ExportNotesModal: React.FC<ExportNotesModalProps> = ({
             {copied ? (
               <>
                 <Check size={14} className="text-eagerGreen stroke-[3]" />
-                <span className="text-eagerGreen">Markdown zkopírován do schránky!</span>
+                <span className="text-eagerGreen">Text zkopírován do schránky!</span>
               </>
             ) : (
               <>
                 <Copy size={14} />
-                <span>Zkopírovat celý Markdown do schránky</span>
+                <span>Zkopírovat celý text do schránky</span>
               </>
             )}
           </button>

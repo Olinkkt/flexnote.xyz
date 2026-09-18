@@ -296,11 +296,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <Download size={20} className="stroke-[2.5]" />
             </div>
             <div>
-              <div className="font-feather font-black text-xs text-duoGray-charcoal flex items-center gap-1.5">
-                <span>Exportovat všechny zápisky</span>
-                <span className="text-[10px] font-feather font-black px-1.5 py-0.2 rounded-md bg-storybookGreen text-eagerGreen-dark border border-eagerGreen/40">
-                  .MD
-                </span>
+              <div className="font-feather font-black text-xs text-duoGray-charcoal">
+                Exportovat všechny zápisky
               </div>
               <p className="text-[11px] font-bold text-duoGray-pencil mt-0.5">
                 Stažení do zařízení nebo odeslání na e-mail
