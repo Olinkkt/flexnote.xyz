@@ -283,7 +283,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
       </div>
 
-      {/* Network & Cloud Status Card (Strictly no pill shapes) */}
+      {/* Combined Cloud & Offline Storage Card */}
       <div className="duo-card p-3.5 bg-white flex flex-col gap-2.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -298,17 +298,15 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             )}
             <div>
               <div className="font-feather font-black text-xs text-duoGray-charcoal">
-                {isOnline ? 'Cloudová synchronizace' : 'Režim offline'}
+                {isOnline ? 'Cloud & Offline úložiště' : 'Režim offline'}
               </div>
               <p className="text-[11px] font-bold text-duoGray-pencil">
-                {isOnline
-                  ? 'Aktivní připojení k serveru'
-                  : 'Změny se ukládají lokálně do zařízení'}
+                {isOnline ? 'Aktivní připojení' : 'Uloženo v zařízení'} • {totalNotes} {totalNotes === 1 ? 'zápisek' : totalNotes < 5 ? 'zápisky' : 'zápisků'} offline
               </p>
             </div>
           </div>
           <span
-            className={`text-[11px] font-feather font-black px-2.5 py-1 rounded-md border ${
+            className={`text-[11px] font-feather font-black px-2.5 py-1 rounded-md border shrink-0 ${
               isOnline
                 ? 'text-eagerGreen bg-storybookGreen/60 border-eagerGreen/30'
                 : 'text-[#b45309] bg-[#fef3c7] border-[#fcd34d]'
@@ -339,26 +337,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             )}
           </div>
         )}
-      </div>
-
-      {/* Offline Storage Card */}
-      <div className="duo-card p-3.5 bg-white flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-gray-100 text-duoGray-charcoal flex items-center justify-center shrink-0">
-            <HardDrive size={17} className="stroke-[2.5]" />
-          </div>
-          <div>
-            <div className="font-feather font-black text-xs text-duoGray-charcoal">
-              Offline úložiště v zařízení
-            </div>
-            <p className="text-[11px] font-bold text-duoGray-pencil">
-              {totalNotes} {totalNotes === 1 ? 'zápisek' : totalNotes < 5 ? 'zápisky' : 'zápisků'} připraveno bez internetu
-            </p>
-          </div>
-        </div>
-        <span className="text-[11px] font-feather font-black text-duoGray-charcoal bg-gray-100 px-2 py-1 rounded-md border border-gray-200">
-          Uloženo
-        </span>
       </div>
 
       {/* PWA Mobile App Card */}
