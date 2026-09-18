@@ -8,14 +8,15 @@ import {
   RotateCcw,
   Trophy,
   Loader2,
-  BookOpen
+  BookOpen,
+  AlertCircle
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { FlashcardItem, NoteItem, SubjectMeta, TopicGroup } from '../types/notes';
 import { playPopSound, playSuccessChime } from '../utils/audio';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { SubjectIcon } from './SubjectIcon';
-import { generateFlashcardsForNote } from '../services/flashcards';
+import { generateFlashcardsForNote, generateFlashcardsForTopic } from '../services/flashcards';
 
 interface FlashcardModalProps {
   note?: NoteItem;
@@ -40,6 +41,7 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generationError, setGenerationError] = useState<string | null>(null);
   const [isCompleted, setIsCompleted] = useState(false);
   const [masteredIds, setMasteredIds] = useState<Set<string>>(new Set());
 
@@ -49,28 +51,43 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
 
   // If no cards exist initially for single note, generate them automatically on first open
   useEffect(() => {
-    if (note && (!note.flashcards || note.flashcards.length === 0)) {
+    if (cards.length === 0) {
       handleGenerateCards();
     }
   }, []);
 
   const handleGenerateCards = async () => {
-    if (!note) return;
     setIsGenerating(true);
+    setGenerationError(null);
     playPopSound();
     try {
-      const generated = await generateFlashcardsForNote(note);
+      let generated: FlashcardItem[] = [];
+      if (topicGroup && topicGroup.notes.length > 0) {
+        generated = await generateFlashcardsForTopic(topicGroup.name, topicGroup.subject, topicGroup.notes);
+      } else if (note) {
+        generated = await generateFlashcardsForNote(note);
+      }
+
       if (generated && generated.length > 0) {
         setCards(generated);
         setCurrentIndex(0);
         setIsFlipped(false);
         setIsCompleted(false);
         setMasteredIds(new Set());
-        await onUpdateFlashcards(note.id, generated);
+        if (note) {
+          await onUpdateFlashcards(note.id, generated);
+        } else if (topicGroup) {
+          for (const n of topicGroup.notes) {
+            await onUpdateFlashcards(n.id, generated);
+          }
+        }
         playSuccessChime();
+      } else {
+        throw new Error('Nepodařilo se vytvořit žádné kartičky z tohoto obsahu.');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to generate flashcards:', err);
+      setGenerationError(err?.message || 'Při generování kartiček došlo k chybě. Zkontrolujte připojení k internetu.');
     } finally {
       setIsGenerating(false);
     }
@@ -139,7 +156,7 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (isCompleted || isGenerating || cards.length === 0) return;
+      if (isCompleted || isGenerating || generationError || cards.length === 0) return;
       if (e.code === 'Space' || e.key === 'Enter') {
         e.preventDefault();
         handleFlip();
@@ -154,7 +171,7 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isCompleted, isGenerating, cards.length, handleFlip, handleMarkMastered, handleMarkRepeat]);
+  }, [isCompleted, isGenerating, generationError, cards.length, handleFlip, handleMarkMastered, handleMarkRepeat]);
 
   const currentCard = cards[currentIndex];
   const progressPercent = cards.length > 0 ? ((currentIndex + 1) / cards.length) * 100 : 0;
@@ -198,17 +215,19 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
         </div>
 
         {/* Progress Bar Strip */}
-        <div className="px-4 py-2.5 bg-white border-b border-duoGray-border flex items-center gap-3">
-          <div className="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden border border-gray-300/60 p-0.5">
-            <div
-              className="bg-eagerGreen h-full rounded-full transition-all duration-300 shadow-xs"
-              style={{ width: `${progressPercent}%` }}
-            />
+        {cards.length > 0 && !isGenerating && !generationError && (
+          <div className="px-4 py-2.5 bg-white border-b border-duoGray-border flex items-center gap-3">
+            <div className="flex-1 h-3 bg-gray-200 rounded-full overflow-hidden border border-gray-300/60 p-0.5">
+              <div
+                className="bg-eagerGreen h-full rounded-full transition-all duration-300 shadow-xs"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+            <span className="text-xs font-feather font-black text-duoGray-pencil tracking-tight shrink-0">
+              {currentIndex + 1} / {cards.length}
+            </span>
           </div>
-          <span className="text-xs font-feather font-black text-duoGray-pencil tracking-tight shrink-0">
-            {cards.length > 0 ? `${currentIndex + 1} / ${cards.length}` : '0 / 0'}
-          </span>
-        </div>
+        )}
 
         {/* Main Content Area */}
         <div className="flex-1 p-4 flex flex-col justify-center items-center overflow-y-auto">
@@ -221,8 +240,29 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
                 AI vytváří tvé kartičky...
               </h3>
               <p className="text-xs text-duoGray-pencil leading-relaxed">
-                Analyzuji zápisek, hledám KaTeX matematické vzorce a zvýrazněné pojmy.
+                {topicGroup
+                  ? `Vytváříme souhrnné kartičky pokrývající všech ${topicGroup.notes.length} stránek z tématu „${topicGroup.name}“.`
+                  : 'Analyzuji zápisek, hledám KaTeX matematické vzorce a zvýrazněné pojmy.'}
               </p>
+            </div>
+          ) : generationError ? (
+            <div className="py-12 flex flex-col items-center justify-center text-center animate-in zoom-in-95 duration-200">
+              <div className="w-14 h-14 rounded-2xl bg-cardinalRed/10 text-cardinalRed flex items-center justify-center mb-4">
+                <AlertCircle size={28} />
+              </div>
+              <h3 className="font-feather font-black text-base text-duoGray-charcoal mb-2">
+                Kartičky se nepodařilo vytvořit
+              </h3>
+              <p className="text-xs text-duoGray-pencil max-w-sm mb-6 leading-relaxed">
+                {generationError}
+              </p>
+              <button
+                onClick={handleGenerateCards}
+                className="duo-btn duo-btn-blue text-xs font-feather font-black uppercase tracking-wider py-2.5 px-6 flex items-center gap-2 cursor-pointer"
+              >
+                <RotateCcw size={15} />
+                <span>Zkusit znovu</span>
+              </button>
             </div>
           ) : isCompleted ? (
             /* Duolingo Victory Screen */
@@ -364,7 +404,7 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
         </div>
 
         {/* Footer Rating & Flip Actions */}
-        {!isCompleted && !isGenerating && cards.length > 0 && (
+        {!isCompleted && !isGenerating && !generationError && cards.length > 0 && (
           <div className="p-3.5 pb-5 bg-white border-t-2 border-duoGray-border">
             <div className="flex items-center gap-2.5">
               <button

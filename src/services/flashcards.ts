@@ -144,14 +144,17 @@ export function generateOfflineFlashcards(note: NoteItem): FlashcardItem[] {
 }
 
 /**
- * Generate smart flashcards using OpenRouter AI model, with seamless offline fallback.
+ * Generate smart flashcards using OpenRouter AI model.
+ * If generation fails or returns no cards, throws a clear descriptive error.
  */
 export async function generateFlashcardsForNote(note: NoteItem): Promise<FlashcardItem[]> {
-  const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    throw new Error('Pro vygenerování kartiček je vyžadováno připojení k internetu.');
+  }
 
-  // If no API key or offline, use smart offline extractor immediately
-  if (!apiKey || apiKey.trim() === '' || apiKey.includes('your_openrouter_api_key_here') || !navigator.onLine) {
-    return generateOfflineFlashcards(note);
+  const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
+  if (!apiKey || apiKey.trim() === '' || apiKey.includes('your_openrouter_api_key_here')) {
+    throw new Error('Chybí OpenRouter API klíč pro AI generování kartiček.');
   }
 
   const systemPrompt = `Jsi výukový asistent aplikace Flexnote specializovaný na tvorbu chytrých oboustranných kartiček (Flashcards) ze školních zápisků studentů.
@@ -208,21 +211,98 @@ VÝSTUP MUSÍ BÝT VÝHRADNĚ VALIDNÍ JSON POLE BEZ DALŠÍHO TEXTU OKOLO:
     });
 
     if (!response.ok) {
-      console.warn(`OpenRouter flashcards request failed with ${response.status}, using offline fallback.`);
-      return generateOfflineFlashcards(note);
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`Generování kartiček přes AI selhalo (kód ${response.status}): ${errorText || response.statusText}`);
     }
 
     const data = await response.json();
     const rawContent = data.choices?.[0]?.message?.content;
 
     if (!rawContent) {
-      return generateOfflineFlashcards(note);
+      throw new Error('AI nevrátila žádný obsah kartiček.');
     }
 
     const cards = parseFlashcardsOutput(rawContent);
-    return cards.length > 0 ? cards : generateOfflineFlashcards(note);
-  } catch (err) {
-    console.warn('Network error during AI flashcard generation, falling back to local extractor:', err);
-    return generateOfflineFlashcards(note);
+    if (cards.length > 0) return cards;
+
+    throw new Error('Nepodařilo se zpracovat vygenerované kartičky z AI. Zkuste to prosím znovu.');
+  } catch (err: any) {
+    throw err;
+  }
+}
+
+/**
+ * Generate smart flashcards for an entire topic combining all notes
+ */
+export async function generateFlashcardsForTopic(
+  topicName: string,
+  subject: string,
+  notes: NoteItem[]
+): Promise<FlashcardItem[]> {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    throw new Error('Pro vygenerování kartiček je vyžadováno připojení k internetu.');
+  }
+
+  const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
+  if (!apiKey || apiKey.trim() === '' || apiKey.includes('your_openrouter_api_key_here')) {
+    throw new Error('Chybí OpenRouter API klíč pro AI generování kartiček.');
+  }
+
+  const combinedContent = notes
+    .map((n, i) => `### Strana ${i + 1}: ${n.title}\n${n.markdown}`)
+    .join('\n\n---\n\n');
+
+  const systemPrompt = `Jsi výukový asistent aplikace Flexnote specializovaný na tvorbu chytrých oboustranných kartiček (Flashcards) ze školních zápisků studentů.
+Tvým úkolem je vytvořit komplexní balíček kartiček pokrývající celé téma „${topicName}“, které se skládá z ${notes.length} stránek zápisků.
+
+PRAVIDLA PRO TVORBU KARTIČEK:
+1. Vygeneruj 6 až 10 nejlepších kartiček pokrývajících celou kapitolu.
+2. FRONT: stručná a jasná otázka nebo pojem.
+3. BACK: přesná odpověď, matematické výrazy VŽDY v KaTeXu ($...$ nebo $$...$$), klíčové pojmy tučně (**bold**).
+4. Vrať VÝHRADNĚ validní JSON pole bez dalšího textu okolo.`;
+
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey.trim()}`,
+        'HTTP-Referer': 'https://flexnote.xyz',
+        'X-Title': 'Flexnote',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.0-flash-exp:free',
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt,
+          },
+          {
+            role: 'user',
+            content: `Vytvoř souhrnné flashcards z tohoto tématu:\n\nTéma: ${topicName}\nPředmět: ${subject}\n\n${combinedContent}`,
+          },
+        ],
+        temperature: 0.3,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`Generování kartiček přes AI selhalo (kód ${response.status}): ${errorText || response.statusText}`);
+    }
+
+    const data = await response.json();
+    const rawContent = data.choices?.[0]?.message?.content;
+
+    if (!rawContent) {
+      throw new Error('AI nevrátila žádný obsah kartiček.');
+    }
+
+    const cards = parseFlashcardsOutput(rawContent);
+    if (cards.length > 0) return cards;
+
+    throw new Error('Nepodařilo se zpracovat vygenerované kartičky z AI. Zkuste to prosím znovu.');
+  } catch (err: any) {
+    throw err;
   }
 }
