@@ -41,7 +41,9 @@ export const App: React.FC = () => {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) {
+          return parsed.filter(n => !n.id.startsWith('note-math-') && !n.id.startsWith('note-czech-') && !n.id.startsWith('note-history-'));
+        }
       }
     } catch {
       // fallback to initial notes
