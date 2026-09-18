@@ -27,6 +27,7 @@ import { UserProfile, signOutUser, updateUserProfile, checkUsernameAvailability 
 import { GamificationState } from '../types/notes';
 import { formatStudyDuration } from '../services/studyTracker';
 import { playPopSound, playSuccessChime } from '../utils/audio';
+import { SchoolAutocomplete } from './SchoolAutocomplete';
 
 interface ProfileViewProps {
   user: { id: string; email?: string };
@@ -564,21 +565,16 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 </div>
               </div>
 
-              {/* School Field */}
+              {/* School Field with MŠMT Autocomplete */}
               <div>
                 <label className="block text-[11px] font-feather font-black uppercase text-duoGray-pencil mb-1">
-                  Škola (ZŠ, SŠ, Gymnázium)
+                  Škola (databáze MŠMT)
                 </label>
-                <div className="relative flex items-center">
-                  <School size={16} className="absolute left-3 text-duoGray-faded" />
-                  <input
-                    type="text"
-                    value={school}
-                    onChange={(e) => setSchool(e.target.value)}
-                    placeholder="např. ZŠ Campanus, Gymnázium Jana Nerudy..."
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl border-2 border-duoGray-border focus:border-eagerGreen focus:outline-none text-xs font-bold text-duoGray-charcoal"
-                  />
-                </div>
+                <SchoolAutocomplete
+                  value={school}
+                  onChange={(val) => setSchool(val)}
+                  placeholder="Vyhledej svou školu (např. Nerudy, Panská, Campanus)..."
+                />
               </div>
 
               {/* Grade Field with categorized chips for ZŠ, SŠ and Gymnázia */}
