@@ -167,30 +167,30 @@ Trumfneš mě? 🚀`;
           </p>
         </div>
 
-        {/* Single prominent Flexit Button */}
+        {/* Single prominent 3D Flexit Button */}
         <button
           onClick={() => {
             playPopSound();
             setShowFlexModal(true);
           }}
-          className="duo-btn duo-btn-white px-3.5 py-2 text-xs font-feather font-black text-orange-600 border-orange-200 border-b-orange-300 hover:bg-orange-50 flex items-center gap-1.5 shadow-xs transition"
+          className="duo-btn duo-btn-white px-3.5 py-2 text-xs font-feather font-black text-orange-600 border-2 border-orange-200 border-b-[4px] border-b-orange-400 hover:bg-orange-50 flex items-center gap-1.5 shadow-xs transition"
         >
           <Share2 size={13} className="stroke-[2.5]" />
           <span>Flexit 🚀</span>
         </button>
       </div>
 
-      {/* Metric Selector - Clean lightweight segmented pill bar */}
-      <div className="flex bg-gray-100/90 p-1 rounded-2xl gap-1 border border-duoGray-border/40">
+      {/* Metric Selector - Tactile Duo 3D Buttons */}
+      <div className="grid grid-cols-3 gap-2">
         <button
           onClick={() => {
             playPopSound();
             setMetric('study_time');
           }}
-          className={`flex-1 py-2 px-2 text-xs font-feather font-black rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer ${
+          className={`duo-btn py-2 px-2 text-xs font-feather font-black rounded-2xl transition flex items-center justify-center gap-1.5 cursor-pointer border-2 ${
             metric === 'study_time'
-              ? 'bg-white text-eagerGreen-dark shadow-xs border border-gray-200/50'
-              : 'text-duoGray-pencil hover:text-duoGray-charcoal'
+              ? 'bg-storybookGreen/50 text-eagerGreen-dark border-eagerGreen border-b-[4px] shadow-xs'
+              : 'bg-white text-duoGray-pencil border-duoGray-border border-b-[3px] hover:border-duoGray-faded'
           }`}
         >
           <Clock size={15} className={metric === 'study_time' ? 'stroke-[2.5]' : ''} />
@@ -202,10 +202,10 @@ Trumfneš mě? 🚀`;
             playPopSound();
             setMetric('diamonds');
           }}
-          className={`flex-1 py-2 px-2 text-xs font-feather font-black rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer ${
+          className={`duo-btn py-2 px-2 text-xs font-feather font-black rounded-2xl transition flex items-center justify-center gap-1.5 cursor-pointer border-2 ${
             metric === 'diamonds'
-              ? 'bg-white text-sparkBlue shadow-xs border border-gray-200/50'
-              : 'text-duoGray-pencil hover:text-duoGray-charcoal'
+              ? 'bg-sparkBlue-tint text-sparkBlue border-sparkBlue border-b-[4px] shadow-xs'
+              : 'bg-white text-duoGray-pencil border-duoGray-border border-b-[3px] hover:border-duoGray-faded'
           }`}
         >
           <Sparkles size={15} className={metric === 'diamonds' ? 'stroke-[2.5]' : ''} />
@@ -217,10 +217,10 @@ Trumfneš mě? 🚀`;
             playPopSound();
             setMetric('streak');
           }}
-          className={`flex-1 py-2 px-2 text-xs font-feather font-black rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer ${
+          className={`duo-btn py-2 px-2 text-xs font-feather font-black rounded-2xl transition flex items-center justify-center gap-1.5 cursor-pointer border-2 ${
             metric === 'streak'
-              ? 'bg-white text-orange-600 shadow-xs border border-gray-200/50'
-              : 'text-duoGray-pencil hover:text-duoGray-charcoal'
+              ? 'bg-amber-100/70 text-orange-600 border-amber-400 border-b-[4px] shadow-xs'
+              : 'bg-white text-duoGray-pencil border-duoGray-border border-b-[3px] hover:border-duoGray-faded'
           }`}
         >
           <Flame size={15} className={metric === 'streak' ? 'fill-orange-500 stroke-[2.5]' : ''} />
@@ -230,14 +230,14 @@ Trumfneš mě? 🚀`;
 
       {/* Secondary Filter Row: Timeframe & School Filter */}
       <div className="flex items-center justify-between">
-        {/* Compact Timeframe Switcher */}
-        <div className="flex items-center gap-1 bg-white border border-duoGray-border/70 rounded-xl p-0.5 shadow-2xs">
+        {/* 3D Timeframe Switcher */}
+        <div className="flex items-center gap-1 bg-white border-2 border-duoGray-border border-b-[3px] rounded-2xl p-1 shadow-2xs">
           <button
             onClick={() => {
               playPopSound();
               setTimeframe('weekly');
             }}
-            className={`px-2.5 py-1 rounded-lg font-feather font-black transition cursor-pointer text-[11px] ${
+            className={`px-2.5 py-1 rounded-xl font-feather font-black transition cursor-pointer text-[11px] ${
               timeframe === 'weekly'
                 ? 'bg-duoGray-charcoal text-white shadow-2xs'
                 : 'text-duoGray-pencil hover:text-duoGray-charcoal'
@@ -250,7 +250,7 @@ Trumfneš mě? 🚀`;
               playPopSound();
               setTimeframe('all-time');
             }}
-            className={`px-2.5 py-1 rounded-lg font-feather font-black transition cursor-pointer text-[11px] ${
+            className={`px-2.5 py-1 rounded-xl font-feather font-black transition cursor-pointer text-[11px] ${
               timeframe === 'all-time'
                 ? 'bg-duoGray-charcoal text-white shadow-2xs'
                 : 'text-duoGray-pencil hover:text-duoGray-charcoal'
@@ -260,7 +260,7 @@ Trumfneš mě? 🚀`;
           </button>
         </div>
 
-        {/* School Filter Pill */}
+        {/* 3D School Filter Button */}
         <div className="flex items-center gap-1">
           <button
             onClick={() => {
@@ -276,10 +276,10 @@ Trumfneš mě? 🚀`;
                 setSchoolFilterOnly(true);
               }
             }}
-            className={`px-2.5 py-1 rounded-xl text-[11px] font-feather font-black flex items-center gap-1 transition cursor-pointer border ${
+            className={`px-3 py-1.5 rounded-xl text-[11px] font-feather font-black flex items-center gap-1 transition cursor-pointer border-2 border-b-[3px] ${
               schoolFilterOnly
                 ? 'bg-sparkBlue text-white border-sparkBlue shadow-xs'
-                : 'bg-white text-duoGray-pencil border-duoGray-border/70 hover:text-duoGray-charcoal'
+                : 'bg-white text-duoGray-pencil border-duoGray-border hover:text-duoGray-charcoal'
             }`}
           >
             <School size={13} />
@@ -288,17 +288,17 @@ Trumfneš mě? 🚀`;
         </div>
       </div>
 
-      {/* Spacious 3D Podium for TOP 3 - Always visible */}
-      <div className="my-1 py-5 px-3 bg-gradient-to-b from-amber-50/30 via-white to-white rounded-3xl border border-duoGray-border/60 shadow-2xs">
+      {/* 3D Podium Card for TOP 3 - Always visible */}
+      <div className="my-1 py-5 px-3 bg-white rounded-3xl border-2 border-duoGray-border border-b-[5px] shadow-sm">
         <div className="flex items-end justify-center gap-2 sm:gap-4 max-w-xs sm:max-w-sm mx-auto">
           {/* 2nd place (Silver - Left) */}
           <div className="flex-1 flex flex-col items-center">
             {entries[1] ? (
               <div className="w-full flex flex-col items-center animate-in slide-in-from-bottom-2 duration-200">
-                <div className="w-12 h-12 rounded-full bg-slate-100 border-2 border-slate-300 flex items-center justify-center font-feather font-black text-sm text-slate-700 shadow-2xs relative mb-1.5">
+                <div className="w-12 h-12 rounded-full bg-slate-100 border-2 border-slate-300 border-b-[3px] border-b-slate-400 flex items-center justify-center font-feather font-black text-sm text-slate-700 shadow-2xs relative mb-1.5">
                   <span className="text-base">🥈</span>
                   {entries[1].isCurrentUser && (
-                    <span className="absolute -top-1 -right-1 bg-eagerGreen text-white text-[9px] px-1 rounded-full font-black shadow-xs">
+                    <span className="absolute -top-1 -right-1 bg-eagerGreen text-white text-[9px] px-1 rounded-full font-black border-b-2 border-eagerGreen-dark shadow-xs">
                       TY
                     </span>
                   )}
@@ -323,9 +323,10 @@ Trumfneš mě? 🚀`;
                 </div>
               </div>
             )}
-            {/* Silver Pedestal - 2nd place medium height */}
-            <div className="w-full h-[80px] bg-gradient-to-t from-slate-200/90 to-slate-100 rounded-t-2xl border border-b-0 border-slate-300/80 flex items-center justify-center text-slate-600 font-feather font-black text-xl shadow-xs">
-              2
+            {/* 3D Silver Pedestal - 2nd place medium height */}
+            <div className="w-full h-[80px] bg-gradient-to-b from-slate-100 via-slate-200 to-slate-300 rounded-t-2xl border-2 border-slate-300 border-b-[6px] border-b-slate-400 shadow-xs flex flex-col items-center justify-center relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-1.5 bg-white/70 rounded-t-xl" />
+              <span className="font-feather font-black text-2xl text-slate-700 drop-shadow-xs">2</span>
             </div>
           </div>
 
@@ -337,10 +338,10 @@ Trumfneš mě? 🚀`;
                   <div className="absolute -top-5 left-0 right-0 flex justify-center pointer-events-none">
                     <Crown size={22} className="text-amber-500 fill-amber-400 animate-bounce" />
                   </div>
-                  <div className="w-14 h-14 rounded-full bg-amber-50 border-2 border-amber-400 flex items-center justify-center font-feather font-black text-lg text-amber-800 shadow-xs">
+                  <div className="w-14 h-14 rounded-full bg-amber-50 border-2 border-amber-400 border-b-[3px] border-b-amber-500 flex items-center justify-center font-feather font-black text-lg text-amber-800 shadow-xs">
                     <span className="text-xl">🥇</span>
                     {entries[0].isCurrentUser && (
-                      <span className="absolute -top-1 -right-1 bg-eagerGreen text-white text-[9px] px-1.5 rounded-full font-black shadow-xs">
+                      <span className="absolute -top-1 -right-1 bg-eagerGreen text-white text-[9px] px-1.5 rounded-full font-black border-b-2 border-eagerGreen-dark shadow-xs">
                         TY
                       </span>
                     )}
@@ -371,9 +372,10 @@ Trumfneš mě? 🚀`;
                 </div>
               </div>
             )}
-            {/* Gold Pedestal - 1st place tallest */}
-            <div className="w-full h-[115px] bg-gradient-to-t from-amber-300/90 via-amber-200/80 to-amber-100/90 rounded-t-2xl border border-b-0 border-amber-400/80 flex items-center justify-center text-amber-800 font-feather font-black text-2xl shadow-xs">
-              1
+            {/* 3D Gold Pedestal - 1st place tallest */}
+            <div className="w-full h-[115px] bg-gradient-to-b from-amber-300 via-amber-400 to-amber-500 rounded-t-2xl border-2 border-amber-400 border-b-[6px] border-b-amber-600 shadow-sm flex flex-col items-center justify-center relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-2 bg-amber-200/70 rounded-t-xl" />
+              <span className="font-feather font-black text-3xl text-amber-950 drop-shadow-xs">1</span>
             </div>
           </div>
 
@@ -381,10 +383,10 @@ Trumfneš mě? 🚀`;
           <div className="flex-1 flex flex-col items-center">
             {entries[2] ? (
               <div className="w-full flex flex-col items-center animate-in slide-in-from-bottom-1 duration-200">
-                <div className="w-12 h-12 rounded-full bg-orange-50 border-2 border-orange-300 flex items-center justify-center font-feather font-black text-sm text-orange-900 shadow-2xs relative mb-1.5">
+                <div className="w-12 h-12 rounded-full bg-orange-50 border-2 border-orange-300 border-b-[3px] border-b-orange-400 flex items-center justify-center font-feather font-black text-sm text-orange-900 shadow-2xs relative mb-1.5">
                   <span className="text-base">🥉</span>
                   {entries[2].isCurrentUser && (
-                    <span className="absolute -top-1 -right-1 bg-eagerGreen text-white text-[9px] px-1 rounded-full font-black shadow-xs">
+                    <span className="absolute -top-1 -right-1 bg-eagerGreen text-white text-[9px] px-1 rounded-full font-black border-b-2 border-eagerGreen-dark shadow-xs">
                       TY
                     </span>
                   )}
@@ -409,28 +411,29 @@ Trumfneš mě? 🚀`;
                 </div>
               </div>
             )}
-            {/* Bronze Pedestal - 3rd place lowest */}
-            <div className="w-full h-[55px] bg-gradient-to-t from-orange-200/70 to-orange-100/80 rounded-t-2xl border border-b-0 border-orange-300/70 flex items-center justify-center text-orange-800 font-feather font-black text-lg shadow-xs">
-              3
+            {/* 3D Bronze Pedestal - 3rd place lowest */}
+            <div className="w-full h-[55px] bg-gradient-to-b from-orange-100 via-orange-200 to-orange-300 rounded-t-2xl border-2 border-orange-300 border-b-[6px] border-b-orange-500 shadow-xs flex flex-col items-center justify-center relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-1.5 bg-orange-50/70 rounded-t-xl" />
+              <span className="font-feather font-black text-xl text-orange-950 drop-shadow-xs">3</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Unified, Clean Ranked List for Ranks 4+ */}
+      {/* Unified, Clean 3D Ranked List for Ranks 4+ */}
       <div className="mt-1">
         {loading ? (
           <div className="py-12 text-center text-xs font-feather font-bold text-duoGray-pencil">
             Načítám žebříček studentů...
           </div>
         ) : listEntries.length === 0 ? (
-          <div className="py-8 text-center text-xs font-bold text-duoGray-pencil bg-white rounded-2xl border border-duoGray-border/60">
+          <div className="py-8 text-center text-xs font-bold text-duoGray-pencil bg-white rounded-3xl border-2 border-duoGray-border border-b-[4px] shadow-2xs">
             {entries.length === 0
               ? 'Zatím v této kategorii nikdo nesoutěží. Buď první na pódiu! 🚀'
               : 'Všichni soutěžící jsou na pódiu výše. Buď další! 🚀'}
           </div>
         ) : (
-          <div className="bg-white rounded-2xl border border-duoGray-border/70 divide-y divide-gray-100 overflow-hidden shadow-xs">
+          <div className="bg-white rounded-3xl border-2 border-duoGray-border border-b-[5px] divide-y-2 divide-gray-100 overflow-hidden shadow-xs">
             {listEntries.map((entry) => {
               const isMe = entry.isCurrentUser;
               return (
@@ -438,20 +441,20 @@ Trumfneš mě? 🚀`;
                   key={entry.id}
                   className={`p-3 sm:px-4 flex items-center justify-between transition ${
                     isMe
-                      ? 'bg-storybookGreen/25'
+                      ? 'bg-storybookGreen/30'
                       : 'hover:bg-gray-50/70'
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <span className={`w-5 text-center font-feather font-black text-xs shrink-0 ${
-                      isMe ? 'text-eagerGreen-dark' : 'text-duoGray-pencil'
+                      isMe ? 'text-eagerGreen-dark font-black' : 'text-duoGray-pencil'
                     }`}>
                       {entry.rank}
                     </span>
 
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 font-feather font-black text-xs uppercase ${
                       isMe
-                        ? 'bg-eagerGreen text-white shadow-2xs'
+                        ? 'bg-eagerGreen text-white border-b-2 border-eagerGreen-dark shadow-2xs'
                         : 'bg-gray-100 text-duoGray-charcoal border border-gray-200'
                     }`}>
                       {entry.username.substring(0, 2)}
@@ -460,12 +463,12 @@ Trumfneš mě? 🚀`;
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
                         <span className={`font-feather font-black text-xs truncate ${
-                          isMe ? 'text-eagerGreen-dark' : 'text-duoGray-charcoal'
+                          isMe ? 'text-eagerGreen-dark font-black' : 'text-duoGray-charcoal'
                         }`}>
                           @{entry.username}
                         </span>
                         {isMe && (
-                          <span className="bg-eagerGreen text-white text-[9px] font-feather font-black px-1.5 py-0.2 rounded-full">
+                          <span className="bg-eagerGreen text-white text-[9px] font-feather font-black px-1.5 py-0.5 rounded-md border-b-2 border-eagerGreen-dark shadow-2xs">
                             TY
                           </span>
                         )}

@@ -77,7 +77,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           onTabChange('leaderboard');
         }}
         className={`flex flex-col items-center justify-center py-1 px-2 rounded-duo transition-colors cursor-pointer ${
-          activeTab === 'leaderboard' ? 'text-amber-500' : 'text-duoGray-pencil hover:text-duoGray-charcoal'
+          activeTab === 'leaderboard' ? 'text-eagerGreen' : 'text-duoGray-pencil hover:text-duoGray-charcoal'
         }`}
       >
         <div className="w-8 h-8 flex items-center justify-center">
