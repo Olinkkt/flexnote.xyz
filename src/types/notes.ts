@@ -13,12 +13,23 @@ export interface SubjectMeta {
   description: string;
 }
 
+export interface FlashcardSRS {
+  interval: number; // Interval do příštího opakování ve dnech
+  repetition: number; // Počet po sobě jdoucích úspěšných zkoušení
+  easeFactor: number; // Multiplikátor snadnosti (výchozí 2.5, min 1.3)
+  dueDate: number; // Timestamp v ms, kdy má student pojem zopakovat
+  lastReviewedAt?: number; // Timestamp posledního zkoušení
+  lapses: number; // Počet selhání ("Neumím to!") – indikátor potíží
+  stability: number; // Odhadovaná stabilita paměťové stopy (ve dnech)
+}
+
 export interface FlashcardItem {
   id: string;
   front: string;
   back: string;
   category?: 'formula' | 'concept' | 'fact' | 'general';
   hint?: string;
+  srs?: FlashcardSRS;
 }
 
 export type QuizQuestionType = 'multiple-choice' | 'fill-in' | 'matching';

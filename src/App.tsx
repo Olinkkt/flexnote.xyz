@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { BookOpen } from 'lucide-react';
 import { MobileFrame } from './components/MobileFrame';
 import { TopHeader } from './components/TopHeader';
@@ -7,6 +7,7 @@ import { ScanModal } from './components/ScanModal';
 import { NoteDetailModal } from './components/NoteDetailModal';
 import { PracticeView } from './components/PracticeView';
 import { BottomNav, TabType } from './components/BottomNav';
+import { getDueCards } from './services/srs';
 
 import { SUBJECTS, INITIAL_NOTES } from './data/mockNotes';
 import { NoteItem, SubjectType } from './types/notes';
@@ -217,6 +218,11 @@ export const App: React.FC = () => {
   // Modals state
   const [scanModalOpen, setScanModalOpen] = useState(false);
   const [selectedNote, setSelectedNote] = useState<NoteItem | null>(null);
+
+  // Total due cards across all notes for SRS reminder badge
+  const totalDueCardsCount = useMemo(() => {
+    return getDueCards(notes).length;
+  }, [notes]);
 
   // Filter notes by selected class / subject
   const displayNotes = notes.filter((n) => {
@@ -440,6 +446,7 @@ export const App: React.FC = () => {
             activeTab={activeTab}
             onTabChange={(tab) => setActiveTab(tab)}
             onOpenScan={() => setScanModalOpen(true)}
+            dueCount={totalDueCardsCount}
           />
 
           {/* Camera / Scan Modal */}

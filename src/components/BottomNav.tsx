@@ -8,12 +8,14 @@ interface BottomNavProps {
   activeTab: TabType;
   onTabChange: (tab: TabType) => void;
   onOpenScan: () => void;
+  dueCount?: number;
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({
   activeTab,
   onTabChange,
   onOpenScan,
+  dueCount = 0,
 }) => {
   return (
     <div className="absolute bottom-0 left-0 right-0 z-40 bg-white border-t-2 border-duoGray-border px-3 py-1.5 flex items-center justify-around select-none">
@@ -45,8 +47,13 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           activeTab === 'practice' ? 'text-eagerGreen' : 'text-duoGray-pencil hover:text-duoGray-charcoal'
         }`}
       >
-        <div className="w-9 h-9 flex items-center justify-center">
+        <div className="w-9 h-9 flex items-center justify-center relative">
           <Brain size={22} className={activeTab === 'practice' ? 'stroke-[2.5]' : 'stroke-[2]'} />
+          {dueCount > 0 && (
+            <span className="absolute -top-0.5 -right-1 min-w-[17px] h-[17px] px-1 bg-amber-500 text-white rounded-full text-[10px] font-feather font-black flex items-center justify-center border-2 border-white shadow-xs animate-in zoom-in-50">
+              {dueCount > 99 ? '99+' : dueCount}
+            </span>
+          )}
         </div>
         <span className="text-[10.5px] font-feather font-black mt-0.5 tracking-tight">
           Procvičování

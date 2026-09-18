@@ -9,18 +9,30 @@ import {
   Trophy,
   Loader2,
   BookOpen,
-  AlertCircle
+  AlertCircle,
+  Brain
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { FlashcardItem, NoteItem, SubjectMeta, TopicGroup } from '../types/notes';
+import { FlashcardItem, NoteItem, SubjectMeta, TopicGroup, SubjectType } from '../types/notes';
 import { playPopSound, playSuccessChime } from '../utils/audio';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { SubjectIcon } from './SubjectIcon';
 import { generateFlashcardsForNote, generateFlashcardsForTopic } from '../services/flashcards';
+import {
+  CardWithNote,
+  calculateNextSRS,
+  calculateRetention,
+  isTroublesome,
+  previewNextInterval,
+  SRSRating
+} from '../services/srs';
 
 interface FlashcardModalProps {
   note?: NoteItem;
   topicGroup?: TopicGroup;
+  customCards?: CardWithNote[];
+  customSessionTitle?: string;
+  customSubjectId?: SubjectType;
   subjects: SubjectMeta[];
   onClose: () => void;
   onUpdateFlashcards: (noteId: string, flashcards: FlashcardItem[]) => Promise<void> | void;
@@ -29,11 +41,16 @@ interface FlashcardModalProps {
 export const FlashcardModal: React.FC<FlashcardModalProps> = ({
   note,
   topicGroup,
+  customCards,
+  customSessionTitle,
+  customSubjectId,
   subjects,
   onClose,
   onUpdateFlashcards,
 }) => {
-  const initialCards = topicGroup
+  const initialCards = customCards
+    ? customCards.map((item) => item.card)
+    : topicGroup
     ? topicGroup.notes.flatMap((n) => n.flashcards || [])
     : note?.flashcards || [];
 
@@ -45,13 +62,13 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
   const [isCompleted, setIsCompleted] = useState(false);
   const [masteredIds, setMasteredIds] = useState<Set<string>>(new Set());
 
-  const subjectId = topicGroup?.subject || note?.subject || 'czech';
+  const subjectId = customSubjectId || topicGroup?.subject || note?.subject || 'czech';
   const subjectMeta = subjects.find((s) => s.id === subjectId) || subjects[0];
-  const displayTitle = topicGroup ? topicGroup.name : note?.title || 'Kartičky';
+  const displayTitle = customSessionTitle || (topicGroup ? topicGroup.name : note?.title || 'Kartičky');
 
   // If no cards exist initially for single note, generate them automatically on first open
   useEffect(() => {
-    if (cards.length === 0) {
+    if (!customCards && cards.length === 0) {
       handleGenerateCards();
     }
   }, []);
@@ -127,23 +144,55 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
     }
   }, [currentIndex]);
 
-  const handleMarkMastered = () => {
+  const handleAnswerRating = async (rating: SRSRating) => {
     if (cards.length === 0) return;
     const currentCard = cards[currentIndex];
+    const newSRS = calculateNextSRS(currentCard.srs, rating);
+    const updatedCard: FlashcardItem = { ...currentCard, srs: newSRS };
+
+    const newCards = [...cards];
+    newCards[currentIndex] = updatedCard;
+    setCards(newCards);
+
     const newMastered = new Set(masteredIds);
-    newMastered.add(currentCard.id);
+    if (rating === 'again') {
+      newMastered.delete(currentCard.id);
+    } else {
+      newMastered.add(currentCard.id);
+    }
     setMasteredIds(newMastered);
+
+    try {
+      if (customCards) {
+        const item = customCards.find((ci) => ci.card.id === currentCard.id);
+        if (item) {
+          const parentNote = item.note;
+          const updatedNoteCards = (parentNote.flashcards || []).map((c) =>
+            c.id === currentCard.id ? updatedCard : c
+          );
+          await onUpdateFlashcards(parentNote.id, updatedNoteCards);
+        }
+      } else if (note) {
+        await onUpdateFlashcards(note.id, newCards);
+      } else if (topicGroup) {
+        for (const n of topicGroup.notes) {
+          if (n.flashcards?.some((c) => c.id === currentCard.id)) {
+            const updatedNoteCards = (n.flashcards || []).map((c) =>
+              c.id === currentCard.id ? updatedCard : c
+            );
+            await onUpdateFlashcards(n.id, updatedNoteCards);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to persist SRS update:', e);
+    }
+
     handleNext();
   };
 
-  const handleMarkRepeat = () => {
-    if (cards.length === 0) return;
-    const currentCard = cards[currentIndex];
-    const newMastered = new Set(masteredIds);
-    newMastered.delete(currentCard.id);
-    setMasteredIds(newMastered);
-    handleNext();
-  };
+  const handleMarkMastered = () => handleAnswerRating('good');
+  const handleMarkRepeat = () => handleAnswerRating('again');
 
   const handleRestart = () => {
     playPopSound();
@@ -277,23 +326,29 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
                 Prošel(a) jsi všech {cards.length} kartiček z tématu „{displayTitle}“.
               </p>
 
-              <div className="bg-gray-50 border-2 border-duoGray-border rounded-2xl p-3.5 mb-5 flex items-center justify-around">
-                <div className="text-center">
-                  <span className="block font-feather font-black text-lg text-eagerGreen">
-                    {masteredIds.size}
-                  </span>
-                  <span className="text-[10px] font-feather font-bold text-duoGray-pencil uppercase tracking-wider">
-                    Umím
-                  </span>
+              <div className="bg-gradient-to-br from-green-50 to-blue-50 border-2 border-duoGray-border rounded-2xl p-3.5 mb-5">
+                <div className="flex items-center justify-around mb-2.5">
+                  <div className="text-center">
+                    <span className="block font-feather font-black text-lg text-eagerGreen">
+                      {masteredIds.size}
+                    </span>
+                    <span className="text-[10px] font-feather font-bold text-duoGray-pencil uppercase tracking-wider">
+                      Umím
+                    </span>
+                  </div>
+                  <div className="w-px h-8 bg-gray-200" />
+                  <div className="text-center">
+                    <span className="block font-feather font-black text-lg text-[#ff4b4b]">
+                      {cards.length - masteredIds.size}
+                    </span>
+                    <span className="text-[10px] font-feather font-bold text-duoGray-pencil uppercase tracking-wider">
+                      Neumím
+                    </span>
+                  </div>
                 </div>
-                <div className="w-px h-8 bg-gray-200" />
-                <div className="text-center">
-                  <span className="block font-feather font-black text-lg text-[#ff4b4b]">
-                    {cards.length - masteredIds.size}
-                  </span>
-                  <span className="text-[10px] font-feather font-bold text-duoGray-pencil uppercase tracking-wider">
-                    Neumím
-                  </span>
+                <div className="text-[11px] font-feather font-extrabold text-sparkBlue bg-white/80 py-1.5 px-2.5 rounded-xl border border-sparkBlue/20 flex items-center justify-center gap-1.5">
+                  <Brain size={14} className="shrink-0" />
+                  <span>Termíny opakování upraveny podle křivky zapomínání</span>
                 </div>
               </div>
 
@@ -309,7 +364,7 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
                   onClick={onClose}
                   className="w-full duo-btn duo-btn-white py-2.5 px-4 text-xs font-feather font-black uppercase tracking-wider text-duoGray-charcoal cursor-pointer"
                 >
-                  Zpět k zápisku
+                  {customCards ? 'Zpět do procvičování' : 'Zpět k zápisku'}
                 </button>
               </div>
             </div>
@@ -350,10 +405,24 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
                       <span>{currentCard?.category === 'formula' ? 'Matematický vzorec' : 'Otázka / Pojem'}</span>
                     </span>
 
-                    <span className="text-[11px] font-feather font-extrabold text-duoGray-faded flex items-center gap-1">
-                      <RotateCw size={12} />
-                      3D Karta
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {currentCard && isTroublesome(currentCard) ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-cardinalRed/10 text-cardinalRed text-[10px] font-feather font-black tracking-tight">
+                          <AlertCircle size={11} />
+                          <span>Dělá potíže{currentCard.srs?.lapses ? ` (${currentCard.srs.lapses}×)` : ''}</span>
+                        </span>
+                      ) : currentCard?.srs && currentCard.srs.repetition > 0 ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-eagerGreen/10 text-eagerGreen text-[10px] font-feather font-black tracking-tight">
+                          <CheckCircle2 size={11} />
+                          <span>Retence {calculateRetention(currentCard.srs)} %</span>
+                        </span>
+                      ) : (
+                        <span className="text-[11px] font-feather font-extrabold text-duoGray-faded flex items-center gap-1">
+                          <RotateCw size={12} />
+                          3D Karta
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Card Front Center (Markdown & KaTeX) */}
@@ -379,10 +448,18 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
                       <span>Odpověď & Řešení</span>
                     </span>
 
-                    <span className="text-[11px] font-feather font-extrabold text-duoGray-faded flex items-center gap-1">
-                      <RotateCw size={12} />
-                      Rub
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {currentCard?.srs?.interval ? (
+                        <span className="text-[10px] font-feather font-bold text-duoGray-pencil">
+                          Interval: {currentCard.srs.interval} d.
+                        </span>
+                      ) : (
+                        <span className="text-[11px] font-feather font-extrabold text-duoGray-faded flex items-center gap-1">
+                          <RotateCw size={12} />
+                          Rub
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Card Back Center (Markdown & KaTeX) */}
@@ -410,10 +487,15 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
               <button
                 onClick={handleMarkRepeat}
                 title="Neumím to!"
-                className="flex-1 duo-btn duo-btn-red py-3 px-3 text-xs font-feather font-black uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                className="flex-1 duo-btn duo-btn-red py-2.5 px-2.5 text-xs font-feather font-black uppercase tracking-wider flex flex-col items-center justify-center cursor-pointer shadow-xs"
               >
-                <X size={16} className="stroke-[3]" />
-                <span>Neumím to!</span>
+                <div className="flex items-center gap-1.5">
+                  <X size={15} className="stroke-[3]" />
+                  <span>Neumím to!</span>
+                </div>
+                <span className="text-[9.5px] opacity-85 font-mono normal-case tracking-normal">
+                  ({previewNextInterval(currentCard?.srs, 'again')})
+                </span>
               </button>
 
               <button
@@ -427,10 +509,15 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
               <button
                 onClick={handleMarkMastered}
                 title="Umím to!"
-                className="flex-1 duo-btn duo-btn-green py-3 px-3 text-xs font-feather font-black uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                className="flex-1 duo-btn duo-btn-green py-2.5 px-2.5 text-xs font-feather font-black uppercase tracking-wider flex flex-col items-center justify-center cursor-pointer shadow-xs"
               >
-                <CheckCircle2 size={16} className="stroke-[2.5]" />
-                <span>Umím to!</span>
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 size={15} className="stroke-[2.5]" />
+                  <span>Umím to!</span>
+                </div>
+                <span className="text-[9.5px] opacity-85 font-mono normal-case tracking-normal">
+                  ({previewNextInterval(currentCard?.srs, 'good')})
+                </span>
               </button>
             </div>
           </div>
