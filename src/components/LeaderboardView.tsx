@@ -288,13 +288,13 @@ Trumfneš mě? 🚀`;
         </div>
       </div>
 
-      {/* Spacious 3D Podium for TOP 3 */}
-      {!loading && entries.length >= 3 && (
-        <div className="my-1 py-5 px-3 bg-gradient-to-b from-amber-50/30 via-white to-white rounded-3xl border border-duoGray-border/60 shadow-2xs">
-          <div className="flex items-end justify-center gap-2 sm:gap-4 max-w-xs sm:max-w-sm mx-auto">
-            {/* 2nd place (Silver) */}
-            {entries[1] && (
-              <div className="flex-1 flex flex-col items-center animate-in slide-in-from-bottom-2 duration-200">
+      {/* Spacious 3D Podium for TOP 3 - Always visible */}
+      <div className="my-1 py-5 px-3 bg-gradient-to-b from-amber-50/30 via-white to-white rounded-3xl border border-duoGray-border/60 shadow-2xs">
+        <div className="flex items-end justify-center gap-2 sm:gap-4 max-w-xs sm:max-w-sm mx-auto">
+          {/* 2nd place (Silver - Left) */}
+          <div className="flex-1 flex flex-col items-center">
+            {entries[1] ? (
+              <div className="w-full flex flex-col items-center animate-in slide-in-from-bottom-2 duration-200">
                 <div className="w-12 h-12 rounded-full bg-slate-100 border-2 border-slate-300 flex items-center justify-center font-feather font-black text-sm text-slate-700 shadow-2xs relative mb-1.5">
                   <span className="text-base">🥈</span>
                   {entries[1].isCurrentUser && (
@@ -309,18 +309,34 @@ Trumfneš mě? 🚀`;
                 <div className="text-[10.5px] font-bold text-duoGray-pencil mb-2 truncate max-w-[90px] text-center">
                   {formatMetricValue(entries[1])}
                 </div>
-                {/* Silver Pedestal */}
-                <div className="w-full h-18 bg-gradient-to-t from-slate-200/90 to-slate-100 rounded-t-2xl border border-b-0 border-slate-300/80 flex items-center justify-center text-slate-600 font-feather font-black text-xl shadow-xs">
-                  2
+              </div>
+            ) : (
+              <div className="w-full flex flex-col items-center opacity-60">
+                <div className="w-12 h-12 rounded-full bg-slate-50 border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400 text-xs font-bold mb-1.5">
+                  <span className="text-base grayscale opacity-60">🥈</span>
+                </div>
+                <div className="text-xs font-feather font-bold text-duoGray-faded text-center">
+                  Volno
+                </div>
+                <div className="text-[10.5px] font-bold text-duoGray-faded mb-2 text-center">
+                  -
                 </div>
               </div>
             )}
+            {/* Silver Pedestal - 2nd place medium height */}
+            <div className="w-full h-[80px] bg-gradient-to-t from-slate-200/90 to-slate-100 rounded-t-2xl border border-b-0 border-slate-300/80 flex items-center justify-center text-slate-600 font-feather font-black text-xl shadow-xs">
+              2
+            </div>
+          </div>
 
-            {/* 1st place (Gold - Champion) */}
-            {entries[0] && (
-              <div className="flex-1 flex flex-col items-center animate-in slide-in-from-bottom-3 duration-200">
-                <div className="relative mb-1.5">
-                  <Crown size={20} className="text-amber-500 fill-amber-400 absolute -top-4 left-1/2 -translate-x-1/2 animate-bounce" />
+          {/* 1st place (Gold - Champion - Center - Tallest!) */}
+          <div className="flex-1 flex flex-col items-center">
+            {entries[0] ? (
+              <div className="w-full flex flex-col items-center animate-in slide-in-from-bottom-3 duration-200">
+                <div className="relative mb-1.5 flex flex-col items-center">
+                  <div className="absolute -top-5 left-0 right-0 flex justify-center pointer-events-none">
+                    <Crown size={22} className="text-amber-500 fill-amber-400 animate-bounce" />
+                  </div>
                   <div className="w-14 h-14 rounded-full bg-amber-50 border-2 border-amber-400 flex items-center justify-center font-feather font-black text-lg text-amber-800 shadow-xs">
                     <span className="text-xl">🥇</span>
                     {entries[0].isCurrentUser && (
@@ -336,16 +352,35 @@ Trumfneš mě? 🚀`;
                 <div className="text-[11px] font-black text-amber-600 mb-2 truncate max-w-[95px] text-center">
                   {formatMetricValue(entries[0])}
                 </div>
-                {/* Gold Pedestal */}
-                <div className="w-full h-26 bg-gradient-to-t from-amber-300/90 via-amber-200/80 to-amber-100/90 rounded-t-2xl border border-b-0 border-amber-400/80 flex items-center justify-center text-amber-800 font-feather font-black text-2xl shadow-xs">
-                  1
+              </div>
+            ) : (
+              <div className="w-full flex flex-col items-center opacity-60">
+                <div className="relative mb-1.5 flex flex-col items-center">
+                  <div className="absolute -top-5 left-0 right-0 flex justify-center pointer-events-none">
+                    <Crown size={22} className="text-amber-400 fill-amber-300 opacity-60" />
+                  </div>
+                  <div className="w-14 h-14 rounded-full bg-amber-50/50 border-2 border-dashed border-amber-300 flex items-center justify-center text-amber-500 shadow-xs">
+                    <span className="text-xl grayscale opacity-60">🥇</span>
+                  </div>
+                </div>
+                <div className="text-xs font-feather font-bold text-duoGray-faded text-center">
+                  Volno
+                </div>
+                <div className="text-[11px] font-bold text-duoGray-faded mb-2 text-center">
+                  -
                 </div>
               </div>
             )}
+            {/* Gold Pedestal - 1st place tallest */}
+            <div className="w-full h-[115px] bg-gradient-to-t from-amber-300/90 via-amber-200/80 to-amber-100/90 rounded-t-2xl border border-b-0 border-amber-400/80 flex items-center justify-center text-amber-800 font-feather font-black text-2xl shadow-xs">
+              1
+            </div>
+          </div>
 
-            {/* 3rd place (Bronze) */}
-            {entries[2] && (
-              <div className="flex-1 flex flex-col items-center animate-in slide-in-from-bottom-1 duration-200">
+          {/* 3rd place (Bronze - Right - Lowest) */}
+          <div className="flex-1 flex flex-col items-center">
+            {entries[2] ? (
+              <div className="w-full flex flex-col items-center animate-in slide-in-from-bottom-1 duration-200">
                 <div className="w-12 h-12 rounded-full bg-orange-50 border-2 border-orange-300 flex items-center justify-center font-feather font-black text-sm text-orange-900 shadow-2xs relative mb-1.5">
                   <span className="text-base">🥉</span>
                   {entries[2].isCurrentUser && (
@@ -360,15 +395,27 @@ Trumfneš mě? 🚀`;
                 <div className="text-[10.5px] font-bold text-duoGray-pencil mb-2 truncate max-w-[90px] text-center">
                   {formatMetricValue(entries[2])}
                 </div>
-                {/* Bronze Pedestal */}
-                <div className="w-full h-14 bg-gradient-to-t from-orange-200/70 to-orange-100/80 rounded-t-2xl border border-b-0 border-orange-300/70 flex items-center justify-center text-orange-800 font-feather font-black text-lg shadow-xs">
-                  3
+              </div>
+            ) : (
+              <div className="w-full flex flex-col items-center opacity-60">
+                <div className="w-12 h-12 rounded-full bg-orange-50/40 border-2 border-dashed border-orange-300 flex items-center justify-center text-orange-500 text-xs font-bold mb-1.5">
+                  <span className="text-base grayscale opacity-60">🥉</span>
+                </div>
+                <div className="text-xs font-feather font-bold text-duoGray-faded text-center">
+                  Volno
+                </div>
+                <div className="text-[10.5px] font-bold text-duoGray-faded mb-2 text-center">
+                  -
                 </div>
               </div>
             )}
+            {/* Bronze Pedestal - 3rd place lowest */}
+            <div className="w-full h-[55px] bg-gradient-to-t from-orange-200/70 to-orange-100/80 rounded-t-2xl border border-b-0 border-orange-300/70 flex items-center justify-center text-orange-800 font-feather font-black text-lg shadow-xs">
+              3
+            </div>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Unified, Clean Ranked List for Ranks 4+ */}
       <div className="mt-1">
@@ -376,9 +423,11 @@ Trumfneš mě? 🚀`;
           <div className="py-12 text-center text-xs font-feather font-bold text-duoGray-pencil">
             Načítám žebříček studentů...
           </div>
-        ) : listEntries.length === 0 && entries.length <= 3 ? (
+        ) : listEntries.length === 0 ? (
           <div className="py-8 text-center text-xs font-bold text-duoGray-pencil bg-white rounded-2xl border border-duoGray-border/60">
-            V této kategorii zatím soutěží první 3 studenti. Buď další!
+            {entries.length === 0
+              ? 'Zatím v této kategorii nikdo nesoutěží. Buď první na pódiu! 🚀'
+              : 'Všichni soutěžící jsou na pódiu výše. Buď další! 🚀'}
           </div>
         ) : (
           <div className="bg-white rounded-2xl border border-duoGray-border/70 divide-y divide-gray-100 overflow-hidden shadow-xs">
