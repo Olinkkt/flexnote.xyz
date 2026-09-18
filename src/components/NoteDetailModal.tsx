@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { X, Copy, Check, BookOpen, Code2, Trash2, Pencil, Save, RotateCcw, Sparkles } from 'lucide-react';
+import { X, Copy, Check, BookOpen, Code2, Trash2, Pencil, Save, RotateCcw } from 'lucide-react';
 import { NoteItem, SubjectMeta } from '../types/notes';
 import { playPopSound, playSuccessChime } from '../utils/audio';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { SubjectIcon } from './SubjectIcon';
-import { FlashcardModal } from './FlashcardModal';
 
 interface NoteDetailModalProps {
   note: NoteItem;
@@ -27,7 +26,6 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
   const [editTitle, setEditTitle] = useState(note.title);
   const [editMarkdown, setEditMarkdown] = useState(note.markdown);
   const [isSaving, setIsSaving] = useState(false);
-  const [showFlashcards, setShowFlashcards] = useState(false);
 
   const subjectMeta = subjects.find(s => s.id === note.subject) || subjects[0];
 
@@ -169,19 +167,6 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                 <Code2 size={13} />
                 <span>Zdrojový kód</span>
               </button>
-
-              {note.flashcards && note.flashcards.length > 0 && (
-                <button
-                  onClick={() => {
-                    playPopSound();
-                    setShowFlashcards(true);
-                  }}
-                  className="px-3 py-1 rounded-duo text-xs font-feather font-extrabold flex items-center gap-1.5 transition bg-white text-sparkBlue hover:brightness-95 shadow-xs border-2 border-duoGray-border cursor-pointer active:scale-95"
-                >
-                  <Sparkles size={13} className="text-sparkBlue shrink-0" />
-                  <span>Kartičky ({note.flashcards.length})</span>
-                </button>
-              )}
             </div>
 
             <span className="text-[11px] font-bold text-duoGray-pencil">
@@ -222,7 +207,7 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
             </div>
           ) : activeTab === 'preview' ? (
             <div className="text-duoGray-charcoal">
-              <div className="bg-storybookGreen/30 rounded-2xl p-3 border-2 border-eagerGreen/40 mb-3">
+              <div className="bg-storybookGreen/30 rounded-2xl p-3 border-2 border-eagerGreen/40 mb-4">
                 <div className="text-[11px] font-feather font-black uppercase text-eagerGreen-dark mb-1">
                   Shrnutí zápisku:
                 </div>
@@ -230,43 +215,6 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                   <MarkdownRenderer content={note.summary} />
                 </div>
               </div>
-
-              {/* Duolingo 3D Flashcards Banner - Only shown when flashcards are not yet created */}
-              {(!note.flashcards || note.flashcards.length === 0) && (
-                <div
-                  onClick={() => {
-                    playPopSound();
-                    setShowFlashcards(true);
-                  }}
-                  className="duo-card duo-card-interactive p-3.5 mb-4 bg-gradient-to-r from-blue-50/70 via-green-50/50 to-white border-2 border-sparkBlue/35 hover:border-sparkBlue cursor-pointer flex items-center justify-between group transition-all"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-2xl bg-sparkBlue text-white flex items-center justify-center border-b-2 border-sparkBlue-dark shadow-xs group-hover:scale-105 transition-transform shrink-0">
-                      <Sparkles size={20} />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="font-feather font-black text-xs text-duoGray-charcoal truncate">
-                        Chytré kartičky (Flashcards)
-                      </div>
-                      <div className="text-[11px] font-bold text-duoGray-pencil mt-0.5 truncate">
-                        Generování jedním kliknutím pomocí AI
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      playPopSound();
-                      setShowFlashcards(true);
-                    }}
-                    className="duo-btn duo-btn-green text-[11px] font-black uppercase tracking-wider py-1.5 px-3 shrink-0 ml-2"
-                  >
-                    Vytvořit
-                  </button>
-                </div>
-              )}
 
               {/* Formatted Markdown with KaTeX math formula rendering */}
               <MarkdownRenderer content={note.markdown} />
@@ -323,20 +271,6 @@ export const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
           </div>
         )}
       </div>
-
-      {/* 3D Duolingo Flashcard Modal */}
-      {showFlashcards && (
-        <FlashcardModal
-          note={note}
-          subjects={subjects}
-          onClose={() => setShowFlashcards(false)}
-          onUpdateFlashcards={async (noteId, flashcards) => {
-            if (onUpdateNote) {
-              await onUpdateNote(noteId, { flashcards });
-            }
-          }}
-        />
-      )}
     </div>
   );
 };

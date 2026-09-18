@@ -5,6 +5,7 @@ import { TopHeader } from './components/TopHeader';
 import { RecentNotesList } from './components/RecentNotesList';
 import { ScanModal } from './components/ScanModal';
 import { NoteDetailModal } from './components/NoteDetailModal';
+import { PracticeView } from './components/PracticeView';
 import { BottomNav, TabType } from './components/BottomNav';
 
 import { SUBJECTS, INITIAL_NOTES } from './data/mockNotes';
@@ -400,6 +401,19 @@ export const App: React.FC = () => {
                   onOpenExport={() => setExportModalOpen(true)}
                 />
               </div>
+            )}
+
+            {activeTab === 'practice' && (
+              <PracticeView
+                notes={displayNotes}
+                allNotes={notes}
+                subjects={SUBJECTS}
+                selectedSubject={selectedSubject}
+                onUpdateFlashcards={async (noteId, flashcards) => {
+                  await handleUpdateNote(noteId, { flashcards });
+                }}
+                onOpenScan={() => setScanModalOpen(true)}
+              />
             )}
 
             {activeTab === 'profile' && (
