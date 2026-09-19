@@ -137,6 +137,7 @@ VÝSTUP MUSÍ BÝT VÝHRADNĚ VALIDNÍ JSON:
         { role: 'system', content: systemInstruction },
         { role: 'user', content: `Vytvoř výukové flashcards ze zápisků:\nTéma: ${promptTitle}\nPředmět: ${subject}\n\n${text}` },
       ],
+      reasoning_effort: 'none',
       temperature: 0.3,
       max_completion_tokens: 2500,
     });
@@ -152,6 +153,7 @@ VÝSTUP MUSÍ BÝT VÝHRADNĚ VALIDNÍ JSON:
         { role: 'system', content: systemInstruction },
         { role: 'user', content: `Vytvoř cvičný test:\nTitul: ${promptTitle}\nPředmět: ${subject}\n\n${text}` },
       ],
+      reasoning_effort: 'none',
       temperature: 0.3,
       max_completion_tokens: 2500,
     });

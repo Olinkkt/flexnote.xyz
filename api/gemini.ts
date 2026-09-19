@@ -147,6 +147,7 @@ VÝSTUP MUSÍ BÝT VÝHRADNĚ VALIDNÍ JSON POLE:
             content: `Vytvoř výukové flashcards ze zápisků:\nTéma: ${promptTitle}\nPředmět: ${subject}\n\n${text}`,
           },
         ],
+        reasoning_effort: 'none',
         temperature: 0.3,
         max_completion_tokens: 2500,
       });
@@ -178,6 +179,7 @@ DŮLEŽITÉ:
             content: `Vytvoř cvičný test:\nTitul: ${promptTitle}\nPředmět: ${subject}\n\n${text}`,
           },
         ],
+        reasoning_effort: 'none',
         temperature: 0.3,
         max_completion_tokens: 2500,
       });
