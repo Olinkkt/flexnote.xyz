@@ -19,22 +19,129 @@ export class GeminiServiceError extends Error {
 }
 
 /**
- * Get Gemini API Key from Vite env variables
+ * Generic caller for /api/gemini serverless endpoint
  */
-export function getGeminiApiKey(): string {
-  const apiKey =
-    import.meta.env.VITE_GEMINI_API_KEY ||
-    import.meta.env.VITE_GOOGLE_API_KEY ||
-    '';
+export async function callGeminiApi(action: 'ocr' | 'flashcards' | 'quiz', payload: Record<string, any>): Promise<any> {
+  try {
+    const response = await fetch('/api/gemini', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ action, payload }),
+    });
 
-  if (!apiKey || apiKey.trim() === '' || apiKey.includes('your_gemini_api_key_here')) {
-    throw new GeminiServiceError(
-      'API_KEY_MISSING',
-      'API klíč pro Google Gemini není nastaven. Nastav prosím VITE_GEMINI_API_KEY v souboru .env.local (klíč vytvoříš na aistudio.google.com/apikey).'
-    );
+    if (response.ok) {
+      const data = await response.json();
+      return data.result;
+    }
+
+    const errData = await response.json().catch(() => ({}));
+    throw new Error(errData?.error || `Chyba serveru (${response.status})`);
+  } catch (err: any) {
+    // If client has a local VITE_GEMINI_API_KEY, fallback to client-side call
+    const clientKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_GOOGLE_API_KEY;
+    if (clientKey && !clientKey.includes('your_gemini_api_key_here')) {
+      console.warn('Backend /api/gemini failed, using direct client-side fallback with local VITE_GEMINI_API_KEY:', err.message);
+      return callGeminiClientDirect(action, payload, clientKey);
+    }
+    throw new GeminiServiceError('API_ERROR', err?.message || 'Chyba při volání Gemini API.');
+  }
+}
+
+/**
+ * Client-side direct call fallback if running purely statically without serverless function
+ */
+async function callGeminiClientDirect(
+  action: 'ocr' | 'flashcards' | 'quiz',
+  payload: Record<string, any>,
+  apiKey: string
+): Promise<any> {
+  const ai = new GoogleGenAI({ apiKey });
+
+  if (action === 'ocr') {
+    const { imageBase64 } = payload;
+    let mimeType = 'image/jpeg';
+    let base64Data = imageBase64;
+    if (imageBase64.includes(';base64,')) {
+      const parts = imageBase64.split(';base64,');
+      mimeType = parts[0].replace('data:', '') || 'image/jpeg';
+      base64Data = parts[1];
+    }
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { inlineData: { mimeType, data: base64Data } },
+            { text: 'Převeď prosím tento zápisek ze sešitu do strukturovaného Markdownu s KaTeX vzorci a identifikuj předmět a širší téma.' },
+          ],
+        },
+      ],
+      config: {
+        systemInstruction: `Jsi Flexnote AI OCR engine. Převeď sešit do Markdownu s KaTeX vzorci ($$, $). Předmět: maths, czech, history, science, uncertain.`,
+        temperature: 0.2,
+        responseMimeType: 'application/json',
+        responseJsonSchema: {
+          type: Type.OBJECT,
+          properties: {
+            title: { type: Type.STRING },
+            topic: { type: Type.STRING },
+            subject: { type: Type.STRING, enum: ['maths', 'czech', 'history', 'science', 'uncertain'] },
+            summary: { type: Type.STRING },
+            markdown: { type: Type.STRING },
+          },
+          required: ['title', 'subject', 'summary', 'markdown'],
+        },
+      },
+    });
+    return JSON.parse(response.text || '{}');
   }
 
-  return apiKey.trim();
+  if (action === 'flashcards') {
+    const { text, promptTitle, subject } = payload;
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: [{ role: 'user', parts: [{ text: `Vytvoř výukové flashcards:\nTéma: ${promptTitle}\nPředmět: ${subject}\n\n${text}` }] }],
+      config: {
+        systemInstruction: `Jsi výukový asistent aplikace Flexnote. Vytvoř 4 až 8 kartiček. Vzorce v KaTeXu.`,
+        temperature: 0.3,
+        responseMimeType: 'application/json',
+        responseJsonSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              front: { type: Type.STRING },
+              back: { type: Type.STRING },
+              category: { type: Type.STRING, enum: ['formula', 'concept', 'fact', 'general'] },
+              hint: { type: Type.STRING },
+            },
+            required: ['front', 'back', 'category'],
+          },
+        },
+      },
+    });
+    return JSON.parse(response.text || '[]');
+  }
+
+  if (action === 'quiz') {
+    const { text, promptTitle, subject, isTopic } = payload;
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: [{ role: 'user', parts: [{ text: `Vytvoř cvičný test:\nTitul: ${promptTitle}\nPředmět: ${subject}\n\n${text}` }] }],
+      config: {
+        systemInstruction: `Jsi expertní pedagogický asistent Flexnote. Vytvoř ${isTopic ? '6 až 8' : '4 až 6'} otázek. Typy: multiple-choice, fill-in, matching. Vzorce v KaTeXu. Validní JSON pole.`,
+        temperature: 0.3,
+        responseMimeType: 'application/json',
+      },
+    });
+    return JSON.parse(response.text || '[]');
+  }
+
+  throw new Error(`Neznámá akce: ${action}`);
 }
 
 /**
@@ -56,106 +163,14 @@ export function fileToBase64(file: File): Promise<string> {
 }
 
 /**
- * OCR note extraction directly using Google Gemini 2.5 Flash with structured JSON output
+ * OCR note extraction via secure /api/gemini backend
  */
 export async function extractNoteFromImage(
   imageBase64: string
 ): Promise<ExtractedNoteResult> {
-  const apiKey = getGeminiApiKey();
-  const ai = new GoogleGenAI({ apiKey });
-
-  // Separate mimeType and raw base64 data
-  let mimeType = 'image/jpeg';
-  let base64Data = imageBase64;
-  if (imageBase64.includes(';base64,')) {
-    const parts = imageBase64.split(';base64,');
-    mimeType = parts[0].replace('data:', '') || 'image/jpeg';
-    base64Data = parts[1];
-  }
-
-  const systemInstruction = `Jsi Flexnote AI OCR engine specializovaný na převod fotografií školních sešitů do přehledného studijního Markdownu.
-
-Pravidla přepisu a formátování:
-1. PŘEPIS TEXTU:
-   - Přepiš čitelný text a oprav zjevné překlepy z rychlého psaní v hodině.
-   - Zcela ignoruj přeškrtnuté chyby a malůvky na okrajích.
-2. MATEMATIKA A VZORCE (KaTeX):
-   - Samostatné a klíčové vzorce vlož VŽDY do blokových závorek: $$...$$ (např. $$D = b^2 - 4ac$$).
-   - Proměnné a krátké výrazy v textu vlož do: $...$ (např. pro $x > 0$).
-   - U výpočtů udržuj postup pod sebou.
-3. STRUKTURA A PŘEHLEDNOST:
-   - Používej nadpisy (# Hlavní téma, ## Podtémata).
-   - Důležité definice a poučky vlož do citace: > **Důležité:** ...
-   - Pokud jsou v sešitě srovnání, slovíčka nebo časové osy, zformátuj je do Markdown tabulky (| ... |).
-4. KLASIFIKACE PŘEDMĚTU:
-   - "maths" (matematika, geometrie)
-   - "czech" (čeština, literatura, mluvnice)
-   - "history" (dějepis, dějiny)
-   - "science" (fyzika, chemie, biologie, zeměpis)
-   - "uncertain" (pokud je text nejednoznačný nebo je ho málo)`;
-
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            {
-              inlineData: {
-                mimeType,
-                data: base64Data,
-              },
-            },
-            {
-              text: 'Převeď prosím tento zápisek ze sešitu do strukturovaného Markdownu s KaTeX vzorci a identifikuj předmět a širší téma.',
-            },
-          ],
-        },
-      ],
-      config: {
-        systemInstruction,
-        temperature: 0.2,
-        responseMimeType: 'application/json',
-        responseJsonSchema: {
-          type: Type.OBJECT,
-          properties: {
-            title: {
-              type: Type.STRING,
-              description: 'Výstižný název stránky zápisku ze sešitu',
-            },
-            topic: {
-              type: Type.STRING,
-              description: 'Název širšího tématu / kapitoly (např. Kvadratické rovnice)',
-            },
-            subject: {
-              type: Type.STRING,
-              enum: ['maths', 'czech', 'history', 'science', 'uncertain'],
-              description: 'Předmět',
-            },
-            summary: {
-              type: Type.STRING,
-              description: 'Stručné shrnutí zápisku 1-2 větami',
-            },
-            markdown: {
-              type: Type.STRING,
-              description: 'Kompletní strukturovaný zápisek v Markdownu s KaTeX vzorci',
-            },
-          },
-          required: ['title', 'subject', 'summary', 'markdown'],
-        },
-      },
-    });
+    const parsed = await callGeminiApi('ocr', { imageBase64 });
 
-    const responseText = response.text;
-    if (!responseText) {
-      throw new GeminiServiceError(
-        'EMPTY_RESPONSE',
-        'Model nevrátil žádný obsah. Zkus vyfotit sešit z větší blízkosti a za lepšího světla.'
-      );
-    }
-
-    const parsed = JSON.parse(responseText);
     const validSubjects: SubjectType[] = ['czech', 'maths', 'history', 'science'];
     const subject = validSubjects.includes(parsed.subject) ? (parsed.subject as SubjectType) : 'uncertain';
 
@@ -167,22 +182,8 @@ Pravidla přepisu a formátování:
       markdown: parsed.markdown || '',
     };
   } catch (err: unknown) {
-    if (err instanceof GeminiServiceError) {
-      throw err;
-    }
+    if (err instanceof GeminiServiceError) throw err;
     const message = err instanceof Error ? err.message : String(err);
-    if (message.includes('API_KEY_INVALID') || message.includes('403') || message.includes('401')) {
-      throw new GeminiServiceError(
-        'AUTH_ERROR',
-        'Neplatný nebo neautorizovaný Google Gemini API klíč. Ověř klíč v .env.local.'
-      );
-    }
-    if (message.includes('429') || message.includes('RESOURCE_EXHAUSTED')) {
-      throw new GeminiServiceError(
-        'RATE_LIMITED',
-        'Dosažen limit bezplatných požadavků Google Gemini (15 RPM). Počkej chvíli a zkus to znovu.'
-      );
-    }
-    throw new GeminiServiceError('API_ERROR', `Chyba Google Gemini: ${message}`);
+    throw new GeminiServiceError('API_ERROR', message);
   }
 }

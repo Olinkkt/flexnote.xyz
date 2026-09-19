@@ -1,7 +1,6 @@
-import { GoogleGenAI, Type } from '@google/genai';
 import { FlashcardItem, NoteItem } from '../types/notes';
 import { checkRateLimit, recordRateLimitUsage } from './rateLimiter';
-import { getGeminiApiKey } from './gemini';
+import { callGeminiApi } from './gemini';
 
 /**
  * Robustly parses JSON from LLM response
@@ -136,7 +135,7 @@ export function generateOfflineFlashcards(note: NoteItem): FlashcardItem[] {
 }
 
 /**
- * Generates high-quality smart flashcards using Google Gemini API.
+ * Generates high-quality smart flashcards using Google Gemini API via secure /api/gemini backend.
  */
 export async function generateFlashcardsForNote(note: NoteItem): Promise<FlashcardItem[]> {
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
@@ -149,79 +148,14 @@ export async function generateFlashcardsForNote(note: NoteItem): Promise<Flashca
     throw new Error(rateCheck.reason || 'Dosažen limit pro generování kartiček.');
   }
 
-  const apiKey = getGeminiApiKey();
-  const ai = new GoogleGenAI({ apiKey });
-
-  const systemInstruction = `Jsi výukový asistent aplikace Flexnote specializovaný na tvorbu chytrých oboustranných kartiček (Flashcards) ze školních zápisků studentů.
-
-PRAVIDLA PRO TVORBU KARTIČEK:
-1. Vygeneruj 4 až 8 nejlepších a nejefektivnějších kartiček pro zkoušení z daného textu.
-2. FRONT (Přední strana):
-   - Stručná a jasná otázka, výzva nebo název pojmu/vzorce (např. "Jak zní vzorec pro diskriminant?", "Co vyjadřuje sinová věta?", "Kdy proběhla bitva na Vítkově?").
-   - Pokud se ptáš na vzorec nebo proměnnou, použij $...$ nebo $$...$$.
-3. BACK (Zadní strana):
-   - Přesná a srozumitelná odpověď.
-   - VŽDY zformátuj matematické rovnice a výpočty do KaTeX syntaxe:
-     - Důležité a samostatné vzorce: $$...$$ (např. $$D = b^2 - 4ac$$)
-     - Krátké proměnné a výrazy v textu: $...$ (např. pro $a \\neq 0$)
-   - Důležité pojmy a klíčová slova zvýrazni **tučně**.
-4. KATEGORIE:
-   - "formula" (matematický/fyzikální vzorec)
-   - "concept" (definice, pojem, pravopisné pravidlo)
-   - "fact" (datum, událost, autor, dílo)
-   - "general" (obecná otázka)`;
-
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            {
-              text: `Vytvoř prosím výukové flashcards z tohoto zápisku:\n\nTéma: ${note.title}\nPředmět: ${note.subject}\n\n${note.markdown}`,
-            },
-          ],
-        },
-      ],
-      config: {
-        systemInstruction,
-        temperature: 0.3,
-        responseMimeType: 'application/json',
-        responseJsonSchema: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              front: {
-                type: Type.STRING,
-                description: 'Otázka na přední straně kartičky',
-              },
-              back: {
-                type: Type.STRING,
-                description: 'Odpověď na zadní straně kartičky (s KaTeXem)',
-              },
-              category: {
-                type: Type.STRING,
-                enum: ['formula', 'concept', 'fact', 'general'],
-              },
-              hint: {
-                type: Type.STRING,
-                description: 'Volitelná nápověda',
-              },
-            },
-            required: ['front', 'back', 'category'],
-          },
-        },
-      },
+    const rawResult = await callGeminiApi('flashcards', {
+      promptTitle: note.title,
+      subject: note.subject,
+      text: note.markdown,
     });
 
-    const responseText = response.text;
-    if (!responseText) {
-      throw new Error('AI nevrátila žádný obsah kartiček.');
-    }
-
-    const cards = parseFlashcardsOutput(responseText);
+    const cards = parseFlashcardsOutput(typeof rawResult === 'string' ? rawResult : JSON.stringify(rawResult));
     if (cards.length > 0) {
       recordRateLimitUsage('generate_flashcards');
       return cards;
@@ -230,15 +164,12 @@ PRAVIDLA PRO TVORBU KARTIČEK:
     throw new Error('Nepodařilo se zpracovat vygenerované kartičky z AI. Zkuste to prosím znovu.');
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    if (message.includes('API_KEY_MISSING')) {
-      throw err;
-    }
     throw new Error(`Generování kartiček selhalo: ${message}`);
   }
 }
 
 /**
- * Generate smart flashcards for an entire topic combining all notes
+ * Generate smart flashcards for an entire topic combining all notes via secure /api/gemini backend.
  */
 export async function generateFlashcardsForTopic(
   topicName: string,
@@ -255,72 +186,18 @@ export async function generateFlashcardsForTopic(
     throw new Error(rateCheck.reason || 'Dosažen limit pro generování kartiček.');
   }
 
-  const apiKey = getGeminiApiKey();
-  const ai = new GoogleGenAI({ apiKey });
-
   const combinedContent = notes
     .map((n, i) => `### Strana ${i + 1}: ${n.title}\n${n.markdown}`)
     .join('\n\n---\n\n');
 
-  const systemInstruction = `Jsi výukový asistent aplikace Flexnote specializovaný na tvorbu chytrých oboustranných kartiček (Flashcards) ze školních zápisků studentů.
-Tvým úkolem je vytvořit komplexní balíček kartiček pokrývající celé téma „${topicName}“, které se skládá z ${notes.length} stránek zápisků.
-
-PRAVIDLA PRO TVORBU KARTIČEK:
-1. Vygeneruj 6 až 10 nejlepších kartiček pokrývajících celou kapitolu.
-2. FRONT: stručná a jasná otázka nebo pojem.
-3. BACK: přesná odpověď, matematické výrazy VŽDY v KaTeXu ($...$ nebo $$...$$), klíčové pojmy tučně (**bold**).`;
-
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            {
-              text: `Vytvoř souhrnné flashcards z tohoto tématu:\n\nTéma: ${topicName}\nPředmět: ${subject}\n\n${combinedContent}`,
-            },
-          ],
-        },
-      ],
-      config: {
-        systemInstruction,
-        temperature: 0.3,
-        responseMimeType: 'application/json',
-        responseJsonSchema: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              front: {
-                type: Type.STRING,
-                description: 'Otázka na přední straně kartičky',
-              },
-              back: {
-                type: Type.STRING,
-                description: 'Odpověď na zadní straně kartičky (s KaTeXem)',
-              },
-              category: {
-                type: Type.STRING,
-                enum: ['formula', 'concept', 'fact', 'general'],
-              },
-              hint: {
-                type: Type.STRING,
-                description: 'Volitelná nápověda',
-              },
-            },
-            required: ['front', 'back', 'category'],
-          },
-        },
-      },
+    const rawResult = await callGeminiApi('flashcards', {
+      promptTitle: topicName,
+      subject,
+      text: combinedContent,
     });
 
-    const responseText = response.text;
-    if (!responseText) {
-      throw new Error('AI nevrátila žádný obsah kartiček.');
-    }
-
-    const cards = parseFlashcardsOutput(responseText);
+    const cards = parseFlashcardsOutput(typeof rawResult === 'string' ? rawResult : JSON.stringify(rawResult));
     if (cards.length > 0) {
       recordRateLimitUsage('generate_flashcards');
       return cards;
@@ -329,9 +206,6 @@ PRAVIDLA PRO TVORBU KARTIČEK:
     throw new Error('Nepodařilo se zpracovat vygenerované kartičky z AI. Zkuste to prosím znovu.');
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    if (message.includes('API_KEY_MISSING')) {
-      throw err;
-    }
     throw new Error(`Generování kartiček selhalo: ${message}`);
   }
 }
