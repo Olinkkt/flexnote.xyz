@@ -344,7 +344,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote, userI
                 {processingMessage}
               </div>
               <span className="text-[11px] text-duoGray-pencil font-medium bg-gray-100 px-2.5 py-0.5 rounded-full mt-1 font-mono">
-                Google Gemini 3.8 Flash
+                GPT-5 Mini
               </span>
             </div>
           )}

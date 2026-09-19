@@ -15,8 +15,8 @@ Tato sekce je určena vývojářům, přispěvatelům a správcům infrastruktur
 | **Frontend Framework** | **React 19 + TypeScript + Vite** | Bleskový build, moderní komponentová architektura a přísná typová kontrola. |
 | **Styling & UI Design** | **Tailwind CSS + Lucide Icons** | Vlastní hravý 3D design systém inspirovaný Duolingem (`duo-btn`, `duo-card`). |
 | **Matematika & Vzorce** | **KaTeX (`katex`)** | Rychlé klientské renderování inline (`$...$`) i blokových (`$$...$$`) matematických rovnic. |
-| **AI Engine (Vision & Text)** | **Google Gemini 3.8 Flash (`@google/genai`)** | Multimodální OCR z fotek, KaTeX formátování, generování výukových flashcards a testů. |
-| **Backend & Security** | **Vercel Serverless Functions (`/api/gemini`)** | Bezpečné volání Gemini API bez úniku API klíčů do klientského JavaScriptu. |
+| **AI Engine (OCR & Text)** | **GPT-5 Mini (`reasoning_effort: low`) & GPT-5.6 Luna** | Cenově optimalizované multimodální OCR ze skenů sešitů (GPT-5 Mini) a bleskové generování flashcards a testů (GPT-5.6 Luna). |
+| **Backend & Security** | **Vercel Serverless Functions (`/api/gemini`)** | Bezpečné volání AI API bez úniku API klíčů do klientského JavaScriptu. |
 | **Databáze & Úložiště** | **Supabase (PostgreSQL + Auth + Storage)** | Ukládání zápisků, uživatelských profilů, školních leaderboardů a fotek sešitů. |
 | **Offline-First & PWA** | **Custom Service Worker (`sw.js`)** | Kompletní offline funkčnost, offline fronta změn a instalace na mobilní zařízení. |
 
@@ -27,7 +27,7 @@ Tato sekce je určena vývojářům, přispěvatelům a správcům infrastruktur
 ```text
 flexnote/
 ├── api/                     # Vercel Serverless funkce
-│   └── gemini.ts            # Privátní backend proxy pro Google Gemini API
+│   └── gemini.ts            # Privátní backend proxy pro AI modely (GPT-5 Mini & GPT-5.6 Luna)
 ├── public/                  # Statické assety a Service Worker
 │   ├── sw.js                # Offline PWA Service Worker
 │   ├── manifest.json        # Manifest pro instalaci aplikace
@@ -68,8 +68,8 @@ npm install
 Vytvoř v kořeni projektu soubor `.env.local` a vyplň potřebné klíče (šablonu najdeš v `.env.example`):
 
 ```env
-# Google Gemini API klíč (získej zdarma na https://aistudio.google.com/apikey)
-GEMINI_API_KEY=AIzaSyTvujKlicZGoogleAiStudio...
+# AI API klíč (OpenRouter nebo OpenAI - např. sk-or-v1-... nebo sk-proj-...)
+GEMINI_API_KEY=sk-or-v1-tvujKlic...
 
 # Supabase konfigurace projektu
 VITE_SUPABASE_URL=https://twoj-projekt.supabase.co
@@ -92,9 +92,9 @@ npm run preview
 
 ### 🔐 Bezpečnost a Vercel Deployment
 
-- **Žádné úniky API klíče:** Proměnná pro Gemini API se jmenuje **`GEMINI_API_KEY`** (bez prefixu `VITE_`). Na Vercelu je uložena jako chráněný **Secret** v Environment Variables a nikdy se nedostane do klientského bundle v prohlížeči.
+- **Žádné úniky API klíče:** Proměnná pro AI API je bezpečně uložena na Vercelu (jako `GEMINI_API_KEY` nebo `OPENROUTER_API_KEY`) bez prefixu `VITE_`. Na Vercelu je uložena jako chráněný **Secret** v Environment Variables a nikdy se nedostane do klientského bundle v prohlížeči.
 - **Serverless Endpoint:** Klientská aplikace komunikuje výhradně přes relativní URL `/api/gemini`, kde běží node runtime s `maxDuration: 60s`.
-- **CORS & Omezení:** V produkci doporučujeme v Google Cloud Console / AI Studiu omezit API klíč pouze na doménu `flexnote.oliverseidl.dev`.
+- **CORS & Omezení:** V produkci doporučujeme omezit API klíč pouze na povolené referrery nebo doménu `flexnote.oliverseidl.dev`.
 
 ---
 
@@ -110,7 +110,7 @@ npm run preview
 
 #### 📸 1. Chytrá digitalizace sešitů (OCR)
 - Stačí vzít telefon, namířit na popsanou stránku v sešitě a vyfotit ji.
-- Špičkový multimodální model **Google Gemini 3.8 Flash** přečte rukopis, opraví zjevné překlepy a vytvoří strukturovaný zápisek s nadpisy, odrážkami a zvýrazněnými definicemi.
+- Cenově dostupný multimodální model **GPT-5 Mini** (s nízkou latencí a úsporným reasoning effort) precizně přečte rukopis, opraví zjevné překlepy a vytvoří strukturovaný zápisek s nadpisy, odrážkami a zvýrazněnými definicemi.
 - Automaticky rozpozná školní předmět (Matematika, Čeština, Dějepis, Přírodní vědy) a zařadí zápisek do správného bloku.
 
 #### 📐 2. Bezchybné matematické vzorce (KaTeX)
@@ -122,11 +122,11 @@ npm run preview
 - Můžeš si zápisky prohlížet, číst a vytvářet nové – jakmile se telefon připojí k internetu, vše se automaticky sesynchronizuje do cloudu.
 
 #### 🃏 4. Automatické kartičky (Flashcards)
-- Z každého zápisku ti aplikace jedním kliknutím připraví sadu oboustranných výukových kartiček na zkoušení pojmů a vzorců.
+- Bleskový textový model **GPT-5.6 Luna** z každého zápisku jedním kliknutím připraví sadu oboustranných výukových kartiček na zkoušení pojmů a vzorců.
 - Zahrnuje i chytrý offline generátor, který z matematických vzorců a tučných pojmů vytvoří kartičky i bez internetu.
 
 #### 📝 5. Cvičné testy a zkoušení
-- Připrav se na písemku formou interaktivního testu.
+- Připrav se na písemku formou interaktivního testu vygenerovaného modelem **GPT-5.6 Luna**.
 - Vyzkouší tě výběrem z možností (A, B, C, D), doplňováním slov i spojováním pojmů se správným vysvětlením.
 
 #### 🏆 6. Žebříčky a spolužáci

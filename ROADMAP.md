@@ -19,7 +19,7 @@ Tento dokument definuje vizi a jednotlivé vývojové milníky aplikace **Flexno
 Cíl: Přeměnit aplikaci na plně funkční cloudovou platformu se živým zpracováním fotografií sešitů.
 
 1. **Napojení na reálnou Vision API (OCR)**:
-   - Integrace **Google Gemini 2.5 Flash** pro rozpoznávání rukopisu a tištěného textu z fotek.
+   - Integrace multimodálního modelu **GPT-5 Mini** (s nízkou latencí a reasoning effort: low) pro rozpoznávání rukopisu a tištěného textu z fotek.
    - Automatická extrakce matematických vzorců přímo do LaTeX / KaTeX syntaxe.
    - Inteligentní sumarizace a rozčlenění do čistého Markdownu se záchytnými body.
    - Automatická detekce školního předmětu z obsahu zápisku s fallbackem na uživatele.
