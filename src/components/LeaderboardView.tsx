@@ -383,7 +383,7 @@ Trumfneš mě?`;
               <div className="w-full flex flex-col items-center animate-in slide-in-from-bottom-3 duration-200">
                 <div className="relative mb-1.5 flex flex-col items-center">
                   <div className="absolute -top-6 left-0 right-0 flex justify-center pointer-events-none">
-                    <Crown size={20} className="text-amber-500 fill-amber-400 drop-shadow-2xs" />
+                    <Crown size={20} className="text-amber-500 fill-amber-400 drop-shadow-2xs animate-crown" />
                   </div>
                   <div className="w-14 h-14 rounded-full bg-amber-50 border-2 border-amber-400 flex items-center justify-center font-feather font-black text-lg text-amber-800 shadow-xs">
                     <Trophy size={22} className="text-amber-500 fill-amber-300" />

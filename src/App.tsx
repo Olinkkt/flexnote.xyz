@@ -424,8 +424,8 @@ export const App: React.FC = () => {
             onSyncNow={triggerSync}
           />
 
-          {/* Main Content Area */}
-          <main className="pb-8 pt-2">
+          {/* Main Content Area with smooth view transitions */}
+          <main key={activeTab} className="pb-8 pt-2 animate-in fade-in-50 duration-150 ease-out">
             {activeTab === 'notes' && (
               <div>
                 {/* Poslední zápisky Section */}
