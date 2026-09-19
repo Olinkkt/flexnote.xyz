@@ -29,11 +29,15 @@ if ('serviceWorker' in navigator && !window.location.host.includes('localhost:51
 }
 
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary>
       <App />
+      <Analytics />
+      <SpeedInsights />
     </ErrorBoundary>
   </React.StrictMode>,
 );
