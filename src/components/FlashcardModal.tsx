@@ -261,9 +261,9 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="w-full md:max-w-[440px] h-[92vh] max-h-[720px] bg-[#f7f7f7] rounded-t-[32px] md:rounded-3xl flex flex-col overflow-hidden shadow-2xl border-t-2 md:border-2 border-duoGray-border animate-in slide-in-from-bottom-6 duration-200">
+      <div className="w-full md:max-w-xl h-[92vh] max-h-[720px] bg-[#f7f7f7] rounded-t-[32px] md:rounded-3xl flex flex-col overflow-hidden shadow-2xl border-t-2 md:border-2 border-duoGray-border animate-in slide-in-from-bottom-6 duration-200">
         {/* Drag handle for mobile */}
-        <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto my-2.5"></div>
+        <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto my-2.5 md:hidden"></div>
 
         {/* Modal Header */}
         <div className="px-4 pb-2.5 bg-white border-b-2 border-duoGray-border flex items-center justify-between">

@@ -575,7 +575,7 @@ Trumfneš mě?`;
 
       {/* Floating Sticky Indicator ONLY if user is far down in a long list */}
       {currentUserEntry && currentUserEntry.rank > 10 && entries.length > 10 && (
-        <div className="fixed bottom-16 left-0 right-0 z-30 px-3 max-w-[440px] mx-auto pointer-events-none">
+        <div className="fixed bottom-16 left-0 right-0 z-30 px-3 max-w-2xl mx-auto pointer-events-none">
           <div className="p-2.5 bg-white/95 backdrop-blur-md rounded-2xl border-2 border-duoGray-border shadow-xl flex items-center justify-between pointer-events-auto">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-7 h-7 rounded-lg bg-eagerGreen text-white flex items-center justify-center font-feather font-black text-xs shrink-0">

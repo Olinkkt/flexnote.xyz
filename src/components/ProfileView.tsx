@@ -22,6 +22,7 @@ import {
   HardDrive,
   RefreshCw,
   Clock,
+  MessageSquare,
 } from 'lucide-react';
 import { UserProfile, signOutUser, updateUserProfile, checkUsernameAvailability } from '../services/supabase';
 import { GamificationState } from '../types/notes';
@@ -428,6 +429,27 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </button>
       )}
 
+      {/* Feedback & App Improvement Card */}
+      <a
+        href="mailto:oliver@oliverseidl.dev?subject=Zp%C4%9Btn%C3%A1%20vazba%20k%20Flexnote&body=Ahoj%20Olivere%2C%0A%0Am%C3%A1m%20n%C3%A1pad%20na%20vylep%C5%A1en%C3%AD%20nebo%20zp%C4%9Btnou%20vazbu%20k%20Flexnote%3A%0A"
+        className="w-full duo-card p-3.5 bg-white hover:bg-gray-50/80 flex items-center justify-between group transition active:scale-98 cursor-pointer text-left shadow-xs"
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-storybookGreen/60 text-eagerGreen flex items-center justify-center shrink-0 border-2 border-eagerGreen/40 shadow-xs">
+            <MessageSquare size={20} className="stroke-[2.5]" />
+          </div>
+          <div className="min-w-0">
+            <div className="font-feather font-black text-xs text-duoGray-charcoal">
+              Máš nápad na vylepšení?
+            </div>
+            <p className="text-[11px] font-bold text-duoGray-pencil mt-0.5 truncate">
+              Napiš mi na <span className="text-sparkBlue underline">oliver@oliverseidl.dev</span>
+            </p>
+          </div>
+        </div>
+        <ChevronRight size={18} className="text-duoGray-pencil group-hover:text-eagerGreen group-hover:translate-x-0.5 transition shrink-0 ml-2" />
+      </a>
+
       {/* Sign Out Button */}
       <button
         onClick={handleSignOut}
@@ -440,7 +462,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {/* Edit Profile Modal */}
       {editModalOpen && (
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 backdrop-blur-xs animate-in fade-in duration-100">
-          <div className="w-full md:max-w-[402px] max-h-[90vh] bg-white rounded-t-[32px] md:rounded-3xl flex flex-col overflow-hidden shadow-2xl border-t-2 md:border-2 border-duoGray-border animate-in slide-in-from-bottom-6 duration-150 p-5">
+          <div className="w-full md:max-w-xl max-h-[90vh] bg-white rounded-t-[32px] md:rounded-3xl flex flex-col overflow-hidden shadow-2xl border-t-2 md:border-2 border-duoGray-border animate-in slide-in-from-bottom-6 duration-150 p-5">
             {/* Header */}
             <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-3">
               <h3 className="font-feather font-black text-[17px] text-duoGray-charcoal flex items-center gap-2">

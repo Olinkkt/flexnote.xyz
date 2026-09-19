@@ -107,7 +107,7 @@ export const ExportNotesModal: React.FC<ExportNotesModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 backdrop-blur-xs animate-in fade-in duration-100">
-      <div className="w-full md:max-w-[420px] max-h-[92vh] bg-white rounded-t-[32px] md:rounded-3xl flex flex-col overflow-hidden shadow-2xl border-t-2 md:border-2 border-duoGray-border animate-in slide-in-from-bottom-6 duration-150 p-5">
+      <div className="w-full md:max-w-xl max-h-[92vh] bg-white rounded-t-[32px] md:rounded-3xl flex flex-col overflow-hidden shadow-2xl border-t-2 md:border-2 border-duoGray-border animate-in slide-in-from-bottom-6 duration-150 p-5">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b-2 border-duoGray-border mb-4">
           <div className="flex items-center gap-2.5">

@@ -311,7 +311,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote, userI
 
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 backdrop-blur-xs animate-in fade-in duration-100">
-      <div className="w-full md:max-w-[402px] max-h-[90vh] bg-white rounded-t-[32px] md:rounded-3xl flex flex-col overflow-hidden shadow-2xl border-t-2 md:border-2 border-duoGray-border animate-in slide-in-from-bottom-6 duration-150">
+      <div className="w-full md:max-w-xl max-h-[90vh] bg-white rounded-t-[32px] md:rounded-3xl flex flex-col overflow-hidden shadow-2xl border-t-2 md:border-2 border-duoGray-border animate-in slide-in-from-bottom-6 duration-150">
         {/* Header */}
         <div className="px-4 py-3 border-b-2 border-duoGray-border flex items-center justify-between">
           <h3 className="font-feather font-black text-[16px] text-duoGray-charcoal">

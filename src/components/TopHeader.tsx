@@ -34,7 +34,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   };
 
   return (
-    <div className="sticky top-0 z-40 bg-white border-b-2 border-duoGray-border px-3 sm:px-4 py-2.5 sm:py-3 shadow-xs select-none">
+    <div className="sticky top-0 z-40 bg-white border-b-2 border-duoGray-border px-3 sm:px-4 pt-[max(0.625rem,env(safe-area-inset-top))] pb-2.5 sm:pb-3 shadow-xs select-none">
       <div className="flex items-center justify-between gap-2">
         {/* Left: App Title & Note Count */}
         <div className="flex items-center gap-2">
