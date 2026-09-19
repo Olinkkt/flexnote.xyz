@@ -68,7 +68,7 @@ Pravidla přepisu a formátování:
    - "uncertain" (pokud je text nejednoznačný nebo je ho málo)`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.8-flash',
         contents: [
           {
             role: 'user',
@@ -135,7 +135,7 @@ PRAVIDLA PRO TVORBU KARTIČEK:
 4. KATEGORIE: "formula", "concept", "fact", "general"`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.8-flash',
         contents: [
           {
             role: 'user',
@@ -189,7 +189,7 @@ DŮLEŽITÉ:
 - Vrať VÝHRADNĚ validní JSON pole.`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.8-flash',
         contents: [
           {
             role: 'user',

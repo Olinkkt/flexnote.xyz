@@ -70,7 +70,7 @@ async function callGeminiClientDirect(
     }
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.8-flash',
       contents: [
         {
           role: 'user',
@@ -103,7 +103,7 @@ async function callGeminiClientDirect(
   if (action === 'flashcards') {
     const { text, promptTitle, subject } = payload;
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.8-flash',
       contents: [{ role: 'user', parts: [{ text: `Vytvoř výukové flashcards:\nTéma: ${promptTitle}\nPředmět: ${subject}\n\n${text}` }] }],
       config: {
         systemInstruction: `Jsi výukový asistent aplikace Flexnote. Vytvoř 4 až 8 kartiček. Vzorce v KaTeXu.`,
@@ -130,7 +130,7 @@ async function callGeminiClientDirect(
   if (action === 'quiz') {
     const { text, promptTitle, subject, isTopic } = payload;
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.8-flash',
       contents: [{ role: 'user', parts: [{ text: `Vytvoř cvičný test:\nTitul: ${promptTitle}\nPředmět: ${subject}\n\n${text}` }] }],
       config: {
         systemInstruction: `Jsi expertní pedagogický asistent Flexnote. Vytvoř ${isTopic ? '6 až 8' : '4 až 6'} otázek. Typy: multiple-choice, fill-in, matching. Vzorce v KaTeXu. Validní JSON pole.`,
