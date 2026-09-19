@@ -12,11 +12,21 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
 /**
  * Fetch notes from Supabase
  */
-export async function fetchNotesFromCloud(userId?: string): Promise<NoteItem[]> {
+export async function fetchNotesFromCloud(
+  userId?: string,
+  limit?: number,
+  offset?: number
+): Promise<NoteItem[]> {
   let query = supabase.from('notes').select('*').order('created_at', { ascending: false });
   
   if (userId) {
     query = query.eq('user_id', userId);
+  }
+
+  if (typeof limit === 'number' && limit > 0) {
+    const from = offset || 0;
+    const to = from + limit - 1;
+    query = query.range(from, to);
   }
 
   const { data, error } = await query;

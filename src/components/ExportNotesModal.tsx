@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { NoteItem } from '../types/notes';
 import { UserProfile, sendNotesExportEmail } from '../services/supabase';
+import { checkRateLimit, recordRateLimitUsage } from '../services/rateLimiter';
 import { playPopSound, playSuccessChime } from '../utils/audio';
 import {
   generateAllNotesMarkdown,
@@ -56,6 +57,13 @@ export const ExportNotesModal: React.FC<ExportNotesModalProps> = ({
 
   const handleSendEmail = async () => {
     if (!targetEmail) return;
+
+    const rateCheck = checkRateLimit('export_email');
+    if (!rateCheck.allowed) {
+      onShowToast?.('Limit odesílání', rateCheck.reason || 'Počkej prosím chvíli před dalším odesláním.');
+      return;
+    }
+
     playPopSound();
     setSendingEmail(true);
     setNeedsConfigNotice(false);
@@ -72,6 +80,7 @@ export const ExportNotesModal: React.FC<ExportNotesModalProps> = ({
       });
 
       if (result.success) {
+        recordRateLimitUsage('export_email');
         playSuccessChime();
         setEmailSent(true);
         onShowToast?.('E-mail odeslán', `Zápisky byly úspěšně odeslány na ${targetEmail}.`);

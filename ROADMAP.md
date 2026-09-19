@@ -105,6 +105,50 @@ Cíl: Propojit spolužáky z téže školy a třídy, umožnit sdílení zdigita
    - Společný třídní feed zdigitalizovaných zápisků z jednotlivých předmětů.
    - Uživatelé v jedné třídě mohou sdílet zdigitalizované zápisky ze sešitu se spolužáky, ukládat si je a společně se učit.
 
+## 🛡️ Produkční hardening, stabilita & infrastruktura (Production Hardening)
+Cíl: Zabezpečit aplikaci před nečekanými náklady, pády v mobilních prohlížečích, chybami sítě a zajistit bleskový běh i při stovkách studentů a zápisků.
+
+### 🔴 Kritická priorita: Ochrana rozpočtu a stabilita (Hotovo ✅)
+1. **Omezení velikosti nahrávání & klientská komprese (`limit upload size`) (Hotovo ✅)**:
+   - Implementován `imageCompressor.ts` s pevnou validací (max 15 MB).
+   - Nativní `<canvas>` komprese do formátu JPEG (kvalita 0.82, max 1920 px, zmenšení z ~15 MB na <1.5 MB) před odesláním do AI a Supabase Storage.
+   - 100% ochrana paměti v mobilním prohlížeči Safari/Chrome před pádovým přetížením.
+2. **Časové limity API volání (`handle API timeouts`) (Hotovo ✅)**:
+   - Implementován 35s `AbortController` timeout v `openrouter.ts`, `flashcards.ts` i `quiz.ts`.
+   - Elegantní zobrazení chybové hlášky při přetížení modelu namísto nekonečného načítání a zamrznutí UI.
+3. **Pevné stropy výdajů & API limity (`set spending caps` & `set API limits`) (Hotovo ✅)**:
+   - Klientské denní kvóty v `rateLimiter.ts` (max 35 OCR skenů/den, max 30 kvízů/den, max 40 kartiček/den).
+   - Doporučení pevného hard-cap stropu v dashboardu OpenRouter (např. $10 bez auto-reloadu) a zapnutého Supabase Spend Cap.
+4. **Rate limiting & Anti-spam cooldown (`add rate limiting`) (Hotovo ✅)**:
+   - Centrální služba `rateLimiter.ts` s 4–5s cooldownem proti rychlému vícenásobnému klikání na AI generátory.
+   - Ochrana e-mailového exportu zápisků (max 5 odeslání za hodinu, 15s cooldown).
+
+### 🟡 Vysoká & Střední priorita: Výkon, databáze a UX odolnost (Hotovo ✅)
+5. **Ošetření neúspěšných požadavků & Retry (`handle failed requests`) (Hotovo ✅)**:
+   - Implementován stav selhání v `ScanModal.tsx` s možností **„Zkusit digitalizaci znovu“** bez ztráty snímku.
+   - Možnost **„Uložit fotku bez AI (doplnit ručně)“**, aby student nepřišel o zápisek při výpadku AI.
+   - Automatický retry s 1.5s prodlevou v `openrouter.ts` pro přechodné síťové výpadky.
+6. **Databázové indexy v Supabase Postgres (`add DB indexes`) (Hotovo ✅)**:
+   - Aplikována migrace `20260919_performance_indexes.sql` přímo do produkční databáze.
+   - Složené indexy: `idx_notes_user_created ON notes(user_id, created_at DESC)`, `idx_notes_subject`, `idx_profiles_study_time`, `idx_profiles_weekly_study`, `idx_profiles_diamonds`, `idx_profiles_weekly_diamonds`, `idx_profiles_streak`, `idx_profiles_school`, `idx_custom_schools_status_name`.
+7. **Optimalizace dotazů & stránkování (`optimise DB queries` & `paginate Lg results`) (Hotovo ✅)**:
+   - `fetchNotesFromCloud` rozšířeno o stránkování (`range(offset, offset + limit - 1)`).
+   - Klientské dávkování po 12 zápiscích v `RecentNotesList.tsx` s tlačítkem **„Načíst další zápisky ({zbývá})“** pro rychlé vykreslení i stovek sešitů.
+8. **Globální ošetření chyb v UI (`add error handling`) (Hotovo ✅)**:
+   - Vytvořena komponenta `ErrorBoundary.tsx` s Duolingo 3D designem a záchytem chyb v Reactu.
+   - Obalena celá aplikace v `main.tsx`.
+   - KaTeX renderer s bezpečným fallbackem bez shození aplikace.
+9. **Stavy načítání a prázdného obsahu (`add loading states` & `add empty states`) (Hotovo ✅)**:
+   - Duolingo skeleton loadery (pulzující karty) pro seznam zápisků při načítání.
+   - Pulzující skeletony v `LeaderboardView.tsx` pro řádky žebříčku.
+   - Přátelský prázdný stav při filtru školy: *„Zatím jsi tu ze své školy jediný! 🏫 Pozvi spolužáky tlačítkem Flexit.“*
+
+### ⚪ Neplatí v současné fázi (Odloženo na zavedení placených funkcí)
+- **Zabránění duplicitním předplatným (`prevent dupe subs`)**:
+  - *Neplatí nyní:* Flexnote je v současnosti 100% bezplatná aplikace pro studenty bez platebního modulu (Stripe). Bod začne platit až při zavedení případného placeného plánu (Flexnote Pro).
+- **Zabránění duplicitním platbám (`prevent dupe payments`)**:
+  - *Neplatí nyní:* V aplikaci neprobíhají žádné reálné finanční transakce ani platby kartou (pouze virtuální drahokamy za studium).
+
 ---
 
 ## 🔮 Nápady do budoucna (Later / Backlog)

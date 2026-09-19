@@ -28,9 +28,13 @@ if ('serviceWorker' in navigator && !window.location.host.includes('localhost:51
   });
 }
 
+import { ErrorBoundary } from './components/ErrorBoundary';
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </React.StrictMode>,
 );
 

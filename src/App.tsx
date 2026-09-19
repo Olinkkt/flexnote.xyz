@@ -418,6 +418,7 @@ export const App: React.FC = () => {
                   onSelectNote={(note) => setSelectedNote(note)}
                   onOpenScan={() => setScanModalOpen(true)}
                   onOpenExport={() => setExportModalOpen(true)}
+                  isLoading={authLoading}
                 />
               </div>
             )}

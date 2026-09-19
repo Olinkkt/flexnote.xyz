@@ -11,7 +11,10 @@ interface RecentNotesListProps {
   onSelectNote: (note: NoteItem) => void;
   onOpenScan: () => void;
   onOpenExport?: () => void;
+  isLoading?: boolean;
 }
+
+const PAGE_SIZE = 12;
 
 export const RecentNotesList: React.FC<RecentNotesListProps> = ({
   notes,
@@ -20,8 +23,10 @@ export const RecentNotesList: React.FC<RecentNotesListProps> = ({
   onSelectNote,
   onOpenScan,
   onOpenExport,
+  isLoading = false,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [visibleCount, setVisibleCount] = useState<number>(PAGE_SIZE);
 
   const getSubjectMeta = (subjectId: string) => {
     return subjects.find(s => s.id === subjectId) || subjects[0];
@@ -37,6 +42,10 @@ export const RecentNotesList: React.FC<RecentNotesListProps> = ({
       (n.tags && n.tags.some(t => t.toLowerCase().includes(q)))
     );
   });
+
+  const paginatedNotes = filteredNotes.slice(0, visibleCount);
+  const hasMore = visibleCount < filteredNotes.length;
+  const remainingCount = filteredNotes.length - visibleCount;
 
   return (
     <div className="px-4 py-3 select-none">
@@ -91,7 +100,26 @@ export const RecentNotesList: React.FC<RecentNotesListProps> = ({
         )}
       </div>
 
-      {notes.length === 0 ? (
+      {isLoading ? (
+        <div className="flex flex-col gap-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="duo-card p-4 bg-white animate-pulse">
+              <div className="flex items-center justify-between mb-2.5">
+                <div className="h-5 w-24 bg-gray-200 rounded-lg"></div>
+                <div className="h-4 w-16 bg-gray-200 rounded-lg"></div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-16 h-16 rounded-2xl bg-gray-200 shrink-0"></div>
+                <div className="flex-1">
+                  <div className="h-4 w-3/4 bg-gray-200 rounded-md mb-2"></div>
+                  <div className="h-3 w-full bg-gray-100 rounded-md mb-1.5"></div>
+                  <div className="h-3 w-2/3 bg-gray-100 rounded-md"></div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : notes.length === 0 ? (
         <div className="duo-card p-8 text-center bg-white">
           <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-3 text-duoGray-pencil">
             <BookOpen size={24} />
@@ -135,7 +163,7 @@ export const RecentNotesList: React.FC<RecentNotesListProps> = ({
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {filteredNotes.map((note) => {
+          {paginatedNotes.map((note) => {
             const meta = getSubjectMeta(note.subject);
             return (
               <div
@@ -204,6 +232,21 @@ export const RecentNotesList: React.FC<RecentNotesListProps> = ({
               </div>
             );
           })}
+
+          {/* Load More Pagination Button */}
+          {hasMore && (
+            <div className="pt-2 pb-4 flex justify-center">
+              <button
+                onClick={() => {
+                  playPopSound();
+                  setVisibleCount((prev) => prev + PAGE_SIZE);
+                }}
+                className="duo-btn duo-btn-white py-2.5 px-5 text-xs font-feather font-black text-duoGray-charcoal border-2 border-duoGray-border hover:bg-gray-50 flex items-center gap-2 cursor-pointer shadow-xs"
+              >
+                <span>Načíst další zápisky ({remainingCount} zbývá)</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

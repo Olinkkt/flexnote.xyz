@@ -468,14 +468,49 @@ Trumfneš mě?`;
       {/* Unified, Clean 3D Ranked List for Ranks 4+ */}
       <div className="mt-1">
         {loading ? (
-          <div className="py-12 text-center text-xs font-feather font-bold text-duoGray-pencil">
-            Načítám žebříček studentů...
+          <div className="bg-white rounded-3xl border-2 border-duoGray-border border-b-[5px] divide-y-2 divide-gray-100 overflow-hidden shadow-xs animate-pulse">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="p-3.5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-4 bg-gray-200 rounded-md"></div>
+                  <div className="w-8 h-8 rounded-full bg-gray-200"></div>
+                  <div>
+                    <div className="w-28 h-3.5 bg-gray-200 rounded-md mb-1.5"></div>
+                    <div className="w-16 h-2.5 bg-gray-100 rounded-md"></div>
+                  </div>
+                </div>
+                <div className="w-14 h-4 bg-gray-200 rounded-md"></div>
+              </div>
+            ))}
           </div>
         ) : listEntries.length === 0 ? (
-          <div className="py-8 text-center text-xs font-bold text-duoGray-pencil bg-white rounded-3xl border-2 border-duoGray-border border-b-[4px] shadow-2xs">
-            {entries.length === 0
-              ? 'Zatím v této kategorii nikdo nesoutěží. Buď první na pódiu!'
-              : 'Všichni soutěžící jsou na pódiu výše. Buď další!'}
+          <div className="py-8 px-4 text-center bg-white rounded-3xl border-2 border-duoGray-border border-b-[4px] shadow-2xs">
+            {schoolFilterOnly && entries.length <= 1 ? (
+              <div>
+                <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center mx-auto mb-2 text-amber-500">
+                  <School size={24} />
+                </div>
+                <h3 className="font-feather font-black text-sm text-duoGray-charcoal mb-1">
+                  Zatím jsi tu ze své školy jediný! 🏫
+                </h3>
+                <p className="text-xs text-duoGray-pencil max-w-[260px] mx-auto mb-3">
+                  Pozvi své spolužáky, abyste se mohli předhánět ve studiu a v ligách.
+                </p>
+                <button
+                  onClick={() => {
+                    playPopSound();
+                    setShowFlexModal(true);
+                  }}
+                  className="duo-btn duo-btn-white py-2 px-3.5 text-xs font-feather font-black text-orange-600 border-2 border-orange-200 border-b-[3px] border-b-orange-400 hover:bg-orange-50 cursor-pointer"
+                >
+                  Pozvat spolužáky (Flexit)
+                </button>
+              </div>
+            ) : entries.length === 0 ? (
+              <p className="text-xs font-bold text-duoGray-pencil">Zatím v této kategorii nikdo nesoutěží. Buď první na pódiu!</p>
+            ) : (
+              <p className="text-xs font-bold text-duoGray-pencil">Všichni soutěžící jsou na pódiu výše. Buď další!</p>
+            )}
           </div>
         ) : (
           <div className="bg-white rounded-3xl border-2 border-duoGray-border border-b-[5px] divide-y-2 divide-gray-100 overflow-hidden shadow-xs">

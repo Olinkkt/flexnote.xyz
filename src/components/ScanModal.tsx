@@ -1,12 +1,14 @@
 import React, { useState, useRef } from 'react';
-import { Camera, X, Loader2, Sparkles, FileText, ArrowRight, HelpCircle, ChevronRight, Check, Zap, WifiOff } from 'lucide-react';
+import { Camera, X, Loader2, Sparkles, FileText, ArrowRight, HelpCircle, ChevronRight, Check, Zap, WifiOff, RotateCcw, AlertTriangle } from 'lucide-react';
 import { NoteItem, SubjectType } from '../types/notes';
 import { playPopSound, playSuccessChime } from '../utils/audio';
 import { SubjectIcon } from './SubjectIcon';
 import { Toast, ToastProps } from './Toast';
-import { fileToBase64, extractNoteFromImage } from '../services/openrouter';
+import { extractNoteFromImage } from '../services/openrouter';
 import { uploadNoteImage } from '../services/supabase';
 import { generateOfflineFlashcards } from '../services/flashcards';
+import { validateFileSize, compressAndPrepareImage } from '../utils/imageCompressor';
+import { checkRateLimit, recordRateLimitUsage } from '../services/rateLimiter';
 
 interface ScanModalProps {
   onClose: () => void;
@@ -30,7 +32,8 @@ const AVAILABLE_CLASSES: { id: SubjectType; name: string }[] = [
 ];
 
 export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote, userId, existingNotes }) => {
-  const [status, setStatus] = useState<'idle' | 'processing' | 'ready'>('idle');
+  const [status, setStatus] = useState<'idle' | 'processing' | 'ready' | 'error'>('idle');
+  const [lastErrorMsg, setLastErrorMsg] = useState<string>('');
   const [processingMessage, setProcessingMessage] = useState('Model Dots3-Note čte text a KaTeX vzorce...');
   const [selectedSubject, setSelectedSubject] = useState<SubjectType | null>(null);
   const [topic, setTopic] = useState<string>('');
@@ -58,17 +61,47 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote, userI
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setSelectedFile(file);
+    // 1. File size limit validation (max 15 MB)
+    const validation = validateFileSize(file);
+    if (!validation.valid) {
+      setToast({
+        type: 'error',
+        title: 'Příliš velký soubor',
+        message: validation.error || 'Maximální povolená velikost souboru je 15 MB.',
+      });
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
     playPopSound();
 
     const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
 
+    // 2. Client-side rate limit & spending guardrail check
+    if (isOnline) {
+      const rateCheck = checkRateLimit('ocr_scan');
+      if (!rateCheck.allowed) {
+        setToast({
+          type: 'error',
+          title: 'Limit digitalizace',
+          message: rateCheck.reason || 'Počkej prosím chvíli před dalším skenováním.',
+        });
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        return;
+      }
+    }
+
+    setStatus('processing');
+    setProcessingMessage('Optimalizuji a komprimuji fotografii...');
+
     try {
-      const base64 = await fileToBase64(file);
-      setPreviewImage(base64);
+      // 3. Client-side compression & resizing (Canvas JPEG ~0.82, max 1920px)
+      const compression = await compressAndPrepareImage(file);
+      setSelectedFile(compression.file);
+      setPreviewImage(compression.base64);
 
       if (!isOnline) {
-        // Offline: save photo locally and allow immediate saving/naming without AI API
+        // Offline: save compressed photo locally and allow immediate saving/naming without AI API
         setIsAiUncertain(true);
         setSelectedSubject(null);
         setExtractedData({
@@ -81,10 +114,9 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote, userI
         return;
       }
 
-      setStatus('processing');
-      setProcessingMessage('Model Dots3-Note analyzuje sešit...');
-      setProcessingMessage('Dots3-Note čte text a převádí vzorce do KaTeXu...');
-      const result = await extractNoteFromImage(base64);
+      setProcessingMessage('Model Dots3-Note čte text a převádí vzorce do KaTeXu...');
+      const result = await extractNoteFromImage(compression.base64);
+      recordRateLimitUsage('ocr_scan');
 
       setExtractedData({
         title: result.title,
@@ -108,8 +140,9 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote, userI
       setStatus('ready');
       playSuccessChime();
     } catch (err: unknown) {
-      setStatus('idle');
       const msg = err instanceof Error ? err.message : String(err);
+      setLastErrorMsg(msg);
+      setStatus('error');
       setToast({
         type: 'error',
         title: 'Chyba při digitalizaci zápisku',
@@ -120,6 +153,82 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote, userI
         fileInputRef.current.value = '';
       }
     }
+  };
+
+  const handleRetryOcr = async () => {
+    if (!previewImage) return;
+
+    playPopSound();
+    const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+    if (!isOnline) {
+      setToast({
+        type: 'warning',
+        title: 'Režim offline',
+        message: 'Pro opakování digitalizace se připoj k internetu, nebo ulož zápisek ručně bez AI.',
+      });
+      return;
+    }
+
+    const rateCheck = checkRateLimit('ocr_scan');
+    if (!rateCheck.allowed) {
+      setToast({
+        type: 'error',
+        title: 'Limit digitalizace',
+        message: rateCheck.reason || 'Počkej prosím chvíli před dalším pokusem.',
+      });
+      return;
+    }
+
+    setStatus('processing');
+    setProcessingMessage('Zkouším digitalizaci znovu (Dots3-Note)...');
+
+    try {
+      const result = await extractNoteFromImage(previewImage);
+      recordRateLimitUsage('ocr_scan');
+
+      setExtractedData({
+        title: result.title,
+        topic: result.topic,
+        summary: result.summary,
+        markdown: result.markdown,
+      });
+
+      if (result.topic) {
+        setTopic(result.topic);
+      }
+
+      if (result.subject === 'uncertain') {
+        setIsAiUncertain(true);
+        setSelectedSubject(null);
+      } else {
+        setIsAiUncertain(false);
+        setSelectedSubject(result.subject);
+      }
+
+      setStatus('ready');
+      playSuccessChime();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setLastErrorMsg(msg);
+      setStatus('error');
+      setToast({
+        type: 'error',
+        title: 'Opakovaný pokus selhal',
+        message: msg,
+      });
+    }
+  };
+
+  const handleSaveWithoutAi = () => {
+    playPopSound();
+    setIsAiUncertain(true);
+    setSelectedSubject(null);
+    setExtractedData({
+      title: 'Nový zápisek ze sešitu',
+      summary: 'Zápisek uložený přímo z fotografie bez AI rozpoznání textu.',
+      markdown: `# Nový zápisek ze sešitu\n\n*(Text můžeš kdykoliv doplnit v detailu zápisku.)*`,
+    });
+    setStatus('ready');
   };
 
   const processDemo = (forceUncertain = false) => {
@@ -286,6 +395,57 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote, userI
               <span className="text-[11px] text-duoGray-pencil font-medium bg-gray-100 px-2.5 py-0.5 rounded-full mt-1 font-mono">
                 dots-studio/dots-3-note-preview:free
               </span>
+            </div>
+          )}
+
+          {status === 'error' && (
+            <div className="flex flex-col items-center text-center p-2 animate-in fade-in duration-150">
+              <div className="w-full bg-[#fef2f2] border-2 border-[#fca5a5] rounded-2xl p-3.5 mb-3 text-left">
+                <div className="flex items-center gap-1.5 font-feather font-black text-xs text-[#b91c1c] mb-1">
+                  <AlertTriangle size={16} className="shrink-0" />
+                  <span>Digitalizace se nezdařila</span>
+                </div>
+                <p className="text-[11px] text-[#7f1d1d] font-medium leading-relaxed">
+                  {lastErrorMsg || 'Nastala chyba při čtení fotografie sešitu. Tvá fotka je však bezpečně uchována v paměti.'}
+                </p>
+              </div>
+
+              {previewImage && (
+                <div className="w-full h-32 rounded-2xl overflow-hidden border-2 border-duoGray-border mb-3 relative bg-gray-50">
+                  <img src={previewImage} alt="Náhled sešitu" className="w-full h-full object-cover" />
+                  <span className="absolute bottom-2 right-2 bg-black/60 text-white text-[10px] font-bold px-2 py-0.5 rounded-md backdrop-blur-xs">
+                    Fotka připravena
+                  </span>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-2 w-full">
+                <button
+                  onClick={handleRetryOcr}
+                  className="w-full duo-btn duo-btn-green py-2.5 px-4 text-xs font-feather font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+                >
+                  <RotateCcw size={15} />
+                  <span>Zkusit digitalizaci znovu</span>
+                </button>
+
+                <button
+                  onClick={handleSaveWithoutAi}
+                  className="w-full duo-btn duo-btn-white py-2.5 px-4 text-xs font-feather font-black text-duoGray-charcoal border-2 border-duoGray-border flex items-center justify-center gap-2 cursor-pointer hover:bg-gray-50"
+                >
+                  <FileText size={15} />
+                  <span>Uložit fotku bez AI (doplnit ručně)</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    playPopSound();
+                    setStatus('idle');
+                  }}
+                  className="text-xs font-feather font-bold text-duoGray-pencil hover:text-duoGray-charcoal py-1 cursor-pointer"
+                >
+                  Vybrat nebo vyfotit jinou fotku
+                </button>
+              </div>
             </div>
           )}
 

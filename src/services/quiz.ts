@@ -1,4 +1,5 @@
 import { NoteItem, QuizQuestion, MultipleChoiceQuestion, FillInQuestion, MatchingQuestion } from '../types/notes';
+import { checkRateLimit, recordRateLimitUsage } from './rateLimiter';
 
 /**
  * Robustly parses JSON from LLM response into typed QuizQuestions
@@ -164,48 +165,68 @@ DŮLEŽITÉ:
   }
 ]`;
 
-  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey.trim()}`,
-      'HTTP-Referer': 'https://flexnote.xyz',
-      'X-Title': 'Flexnote',
-    },
-    body: JSON.stringify({
-      model: 'google/gemini-2.0-flash-exp:free',
-      messages: [
-        {
-          role: 'system',
-          content: systemPrompt,
-        },
-        {
-          role: 'user',
-          content: `Vytvoř cvičný test ze zápisku:\n\nTitul: ${note.title}\nPředmět: ${note.subject}\n\nObsah zápisku:\n${note.markdown}`,
-        },
-      ],
-      temperature: 0.3,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => '');
-    throw new Error(`Generování testu přes AI selhalo (kód ${response.status}): ${errorText || response.statusText}`);
+  // Rate limit and spending cap check
+  const rateCheck = checkRateLimit('generate_quiz');
+  if (!rateCheck.allowed) {
+    throw new Error(rateCheck.reason || 'Dosažen limit pro generování cvičného testu.');
   }
 
-  const data = await response.json();
-  const rawContent = data.choices?.[0]?.message?.content;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 35000);
 
-  if (!rawContent) {
-    throw new Error('AI nevrátila žádný obsah testu.');
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey.trim()}`,
+        'HTTP-Referer': 'https://flexnote.xyz',
+        'X-Title': 'Flexnote',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.0-flash-exp:free',
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt,
+          },
+          {
+            role: 'user',
+            content: `Vytvoř cvičný test ze zápisku:\n\nTitul: ${note.title}\nPředmět: ${note.subject}\n\nObsah zápisku:\n${note.markdown}`,
+          },
+        ],
+        temperature: 0.3,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`Generování testu přes AI selhalo (kód ${response.status}): ${errorText || response.statusText}`);
+    }
+
+    const data = await response.json();
+    const rawContent = data.choices?.[0]?.message?.content;
+
+    if (!rawContent) {
+      throw new Error('AI nevrátila žádný obsah testu.');
+    }
+
+    const questions = parseQuizOutput(rawContent);
+    if (questions.length === 0) {
+      throw new Error('Nepodařilo se zpracovat vygenerovaný test z AI. Zkuste to prosím znovu.');
+    }
+
+    recordRateLimitUsage('generate_quiz');
+    return questions;
+  } catch (err: any) {
+    if (err?.name === 'AbortError') {
+      throw new Error('Generování cvičného testu vypršelo (časový limit 35 s). AI model neodpověděl včas.');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  const questions = parseQuizOutput(rawContent);
-  if (questions.length === 0) {
-    throw new Error('Nepodařilo se zpracovat vygenerovaný test z AI. Zkuste to prosím znovu.');
-  }
-
-  return questions;
 }
 
 /**
@@ -218,6 +239,12 @@ export async function generateQuizForTopic(
 ): Promise<QuizQuestion[]> {
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
     throw new Error('Pro vygenerování cvičného testu je vyžadováno připojení k internetu.');
+  }
+
+  // Rate limit and spending cap check
+  const rateCheck = checkRateLimit('generate_quiz');
+  if (!rateCheck.allowed) {
+    throw new Error(rateCheck.reason || 'Dosažen limit pro generování cvičného testu.');
   }
 
   const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
@@ -263,47 +290,61 @@ DŮLEŽITÉ:
 - Otázky musí testovat znalosti napříč všemi ${notes.length} stránkami zápisků.
 - Vrať VÝHRADNĚ validní JSON pole bez jakéhokoliv dalšího textu okolo.`;
 
-  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey.trim()}`,
-      'HTTP-Referer': 'https://flexnote.xyz',
-      'X-Title': 'Flexnote',
-    },
-    body: JSON.stringify({
-      model: 'google/gemini-2.0-flash-exp:free',
-      messages: [
-        {
-          role: 'system',
-          content: systemPrompt,
-        },
-        {
-          role: 'user',
-          content: `Vytvoř souhrnný cvičný test pro celou kapitolu / téma:\n\nTéma: ${topicName}\nPředmět: ${subject}\nPočet stránek sešitu: ${notes.length}\n\nObsah všech stránek tématu:\n${combinedContent}`,
-        },
-      ],
-      temperature: 0.3,
-    }),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 35000);
 
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => '');
-    throw new Error(`Generování testu z tématu selhalo (kód ${response.status}): ${errorText || response.statusText}`);
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey.trim()}`,
+        'HTTP-Referer': 'https://flexnote.xyz',
+        'X-Title': 'Flexnote',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.0-flash-exp:free',
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt,
+          },
+          {
+            role: 'user',
+            content: `Vytvoř souhrnný cvičný test pro celou kapitolu / téma:\n\nTéma: ${topicName}\nPředmět: ${subject}\nPočet stránek sešitu: ${notes.length}\n\nObsah všech stránek tématu:\n${combinedContent}`,
+          },
+        ],
+        temperature: 0.3,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      throw new Error(`Generování testu z tématu selhalo (kód ${response.status}): ${errorText || response.statusText}`);
+    }
+
+    const data = await response.json();
+    const rawContent = data.choices?.[0]?.message?.content;
+
+    if (!rawContent) {
+      throw new Error('AI nevrátila žádný obsah testu.');
+    }
+
+    const questions = parseQuizOutput(rawContent);
+    if (questions.length === 0) {
+      throw new Error('Nepodařilo se zpracovat test pro téma. Zkuste to prosím znovu.');
+    }
+
+    recordRateLimitUsage('generate_quiz');
+    return questions;
+  } catch (err: any) {
+    if (err?.name === 'AbortError') {
+      throw new Error('Generování cvičného testu pro téma vypršelo (časový limit 35 s). AI model neodpověděl včas.');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  const data = await response.json();
-  const rawContent = data.choices?.[0]?.message?.content;
-
-  if (!rawContent) {
-    throw new Error('AI nevrátila žádný obsah testu.');
-  }
-
-  const questions = parseQuizOutput(rawContent);
-  if (questions.length === 0) {
-    throw new Error('Nepodařilo se zpracovat test pro téma. Zkuste to prosím znovu.');
-  }
-
-  return questions;
 }
 

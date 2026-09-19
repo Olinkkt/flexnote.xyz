@@ -1,4 +1,5 @@
 import { FlashcardItem, NoteItem } from '../types/notes';
+import { checkRateLimit, recordRateLimitUsage } from './rateLimiter';
 
 /**
  * Robustly parses JSON from LLM response
@@ -152,6 +153,12 @@ export async function generateFlashcardsForNote(note: NoteItem): Promise<Flashca
     throw new Error('Pro vygenerování kartiček je vyžadováno připojení k internetu.');
   }
 
+  // Rate limit and spending cap check
+  const rateCheck = checkRateLimit('generate_flashcards');
+  if (!rateCheck.allowed) {
+    throw new Error(rateCheck.reason || 'Dosažen limit pro generování kartiček.');
+  }
+
   const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
   if (!apiKey || apiKey.trim() === '' || apiKey.includes('your_openrouter_api_key_here')) {
     throw new Error('Chybí OpenRouter API klíč pro AI generování kartiček.');
@@ -185,9 +192,13 @@ VÝSTUP MUSÍ BÝT VÝHRADNĚ VALIDNÍ JSON POLE BEZ DALŠÍHO TEXTU OKOLO:
   }
 ]`;
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 35000);
+
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
+      signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey.trim()}`,
@@ -223,11 +234,19 @@ VÝSTUP MUSÍ BÝT VÝHRADNĚ VALIDNÍ JSON POLE BEZ DALŠÍHO TEXTU OKOLO:
     }
 
     const cards = parseFlashcardsOutput(rawContent);
-    if (cards.length > 0) return cards;
+    if (cards.length > 0) {
+      recordRateLimitUsage('generate_flashcards');
+      return cards;
+    }
 
     throw new Error('Nepodařilo se zpracovat vygenerované kartičky z AI. Zkuste to prosím znovu.');
   } catch (err: any) {
+    if (err?.name === 'AbortError') {
+      throw new Error('Generování kartiček vypršelo (časový limit 35 s). AI model neodpověděl včas.');
+    }
     throw err;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
@@ -241,6 +260,12 @@ export async function generateFlashcardsForTopic(
 ): Promise<FlashcardItem[]> {
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
     throw new Error('Pro vygenerování kartiček je vyžadováno připojení k internetu.');
+  }
+
+  // Rate limit and spending cap check
+  const rateCheck = checkRateLimit('generate_flashcards');
+  if (!rateCheck.allowed) {
+    throw new Error(rateCheck.reason || 'Dosažen limit pro generování kartiček.');
   }
 
   const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
@@ -261,9 +286,13 @@ PRAVIDLA PRO TVORBU KARTIČEK:
 3. BACK: přesná odpověď, matematické výrazy VŽDY v KaTeXu ($...$ nebo $$...$$), klíčové pojmy tučně (**bold**).
 4. Vrať VÝHRADNĚ validní JSON pole bez dalšího textu okolo.`;
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 35000);
+
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
+      signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey.trim()}`,
@@ -299,10 +328,18 @@ PRAVIDLA PRO TVORBU KARTIČEK:
     }
 
     const cards = parseFlashcardsOutput(rawContent);
-    if (cards.length > 0) return cards;
+    if (cards.length > 0) {
+      recordRateLimitUsage('generate_flashcards');
+      return cards;
+    }
 
     throw new Error('Nepodařilo se zpracovat vygenerované kartičky z AI. Zkuste to prosím znovu.');
   } catch (err: any) {
+    if (err?.name === 'AbortError') {
+      throw new Error('Generování kartiček vypršelo (časový limit 35 s). AI model neodpověděl včas.');
+    }
     throw err;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }

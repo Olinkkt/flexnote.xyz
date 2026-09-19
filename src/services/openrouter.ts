@@ -82,49 +82,84 @@ Výstup musí být VÝHRADNĚ validní JSON v tomto formátu (žádný další t
   "markdown": "Kompletní strukturovaný zápisek v Markdownu s KaTeX vzorci"
 }`;
 
-  let response: Response;
-  try {
-    response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey.trim()}`,
-        'HTTP-Referer': 'https://flexnote.xyz',
-        'X-Title': 'Flexnote',
-      },
-      body: JSON.stringify({
-        model: 'dots-studio/dots-3-note-preview:free',
-        messages: [
-          {
-            role: 'system',
-            content: systemPrompt,
-          },
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: 'Převeď prosím tento zápisek ze sešitu do strukturovaného Markdownu s KaTeX vzorci a identifikuj předmět.',
-              },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: imageBase64,
-                },
-              },
-            ],
-          },
-        ],
-        temperature: 0.2,
-      }),
-    });
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    throw new OpenRouterError(
-      'NETWORK_ERROR',
-      `Nelze se připojit k OpenRouter API: ${message}`
-    );
+async function callOpenRouterWithRetry(apiKey: string, body: unknown, retries = 1): Promise<Response> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 35000);
+    try {
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey.trim()}`,
+          'HTTP-Referer': 'https://flexnote.xyz',
+          'X-Title': 'Flexnote',
+        },
+        body: JSON.stringify(body),
+      });
+
+      // If server returned temporary 502/503/504 error and we have retries left, wait 1.5s and retry
+      if (!response.ok && [502, 503, 504].includes(response.status) && attempt < retries) {
+        clearTimeout(timeoutId);
+        await new Promise((r) => setTimeout(r, 1500));
+        continue;
+      }
+
+      return response;
+    } catch (err: unknown) {
+      clearTimeout(timeoutId);
+      if (err instanceof Error && err.name === 'AbortError') {
+        throw new OpenRouterError(
+          'TIMEOUT',
+          'Požadavek vypršel (35 s). Model neodpověděl včas. Zkus to prosím za chvíli znovu.'
+        );
+      }
+      if (attempt < retries) {
+        await new Promise((r) => setTimeout(r, 1500));
+        continue;
+      }
+      const message = err instanceof Error ? err.message : String(err);
+      throw new OpenRouterError(
+        'NETWORK_ERROR',
+        `Nelze se připojit k OpenRouter API: ${message}`
+      );
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
+  throw new OpenRouterError('NETWORK_ERROR', 'Nepodařilo se navázat spojení po opakovaném pokusu.');
+}
+
+  const response = await callOpenRouterWithRetry(
+    apiKey,
+    {
+      model: 'dots-studio/dots-3-note-preview:free',
+      messages: [
+        {
+          role: 'system',
+          content: systemPrompt,
+        },
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: 'Převeď prosím tento zápisek ze sešitu do strukturovaného Markdownu s KaTeX vzorci a identifikuj předmět.',
+            },
+            {
+              type: 'image_url',
+              image_url: {
+                url: imageBase64,
+              },
+            },
+          ],
+        },
+      ],
+      temperature: 0.2,
+    },
+    1
+  );
 
   if (!response.ok) {
     let errorDetail = '';
