@@ -19,6 +19,7 @@ import {
   subscribeToUserNotes,
   subscribeToUserProfile,
   fetchUserProfile,
+  getCachedUserProfile,
   checkCurrentUserVerification,
   signOutUser,
   deleteUserAccount,
@@ -26,7 +27,6 @@ import {
   User,
 } from './services/supabase';
 import { playSuccessChime } from './utils/audio';
-import { Toast } from './components/Toast';
 import { AuthScreen } from './components/AuthScreen';
 import { ConfirmEmailScreen } from './components/ConfirmEmailScreen';
 import { ProfileView } from './components/ProfileView';
@@ -60,10 +60,9 @@ export const App: React.FC = () => {
 
   // Auth & Profile State
   const [user, setUser] = useState<User | null>(null);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(() => getCachedUserProfile());
   const [authLoading, setAuthLoading] = useState(true);
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
-  const [syncToast, setSyncToast] = useState<{ title: string; message: string } | null>(null);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [streakModalOpen, setStreakModalOpen] = useState(false);
 
@@ -108,12 +107,8 @@ export const App: React.FC = () => {
     pendingCount,
     isSyncing,
     triggerSync,
-  } = useOfflineSync(user?.id, (syncedCount) => {
+  } = useOfflineSync(user?.id, () => {
     playSuccessChime();
-    setSyncToast({
-      title: 'Změny synchronizovány',
-      message: `${syncedCount} ${syncedCount === 1 ? 'změna byla synchronizována' : syncedCount < 5 ? 'změny byly synchronizovány' : 'změn bylo synchronizováno'} do cloudu.`,
-    });
     if (user?.id) {
       fetchNotesFromCloud(user.id).then((cloudNotes) => {
         if (cloudNotes && cloudNotes.length > 0) setNotes(cloudNotes);
@@ -138,34 +133,49 @@ export const App: React.FC = () => {
 
   // Sync Supabase Auth and Notes on mount & auth changes
   useEffect(() => {
-    // 1. Check initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      const currentUser = session?.user || null;
+    let lastLoadedUserId: string | null = null;
+
+    const loadUserData = (currentUser: User | null) => {
       setUser(currentUser);
-      if (currentUser && (currentUser.email_confirmed_at || currentUser.app_metadata?.provider !== 'email')) {
-        fetchUserProfile(currentUser.id).then(setUserProfile);
-        fetchNotesFromCloud(currentUser.id).then((cloudNotes) => {
-          if (cloudNotes && cloudNotes.length > 0) setNotes(cloudNotes);
-        });
+      if (!currentUser) {
+        setUserProfile(null);
+        lastLoadedUserId = null;
+        setAuthLoading(false);
+        return;
+      }
+
+      const isVerified = Boolean(
+        currentUser.email_confirmed_at ||
+        (currentUser.app_metadata?.provider && currentUser.app_metadata.provider !== 'email')
+      );
+
+      if (isVerified) {
+        // Prevent duplicate simultaneous fetches on startup
+        if (lastLoadedUserId !== currentUser.id) {
+          lastLoadedUserId = currentUser.id;
+          fetchUserProfile(currentUser.id).then((p) => {
+            if (p) setUserProfile(p);
+          });
+          fetchNotesFromCloud(currentUser.id).then((cloudNotes) => {
+            if (cloudNotes && cloudNotes.length > 0) setNotes(cloudNotes);
+          });
+        }
+      } else {
+        setUserProfile(null);
       }
       setAuthLoading(false);
+    };
+
+    // 1. Check initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      loadUserData(session?.user || null);
     }).catch(() => {
       setAuthLoading(false);
     });
 
     // 2. Listen to auth state changes (login, signup, logout)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      const currentUser = session?.user || null;
-      setUser(currentUser);
-      if (currentUser && (currentUser.email_confirmed_at || currentUser.app_metadata?.provider !== 'email')) {
-        fetchUserProfile(currentUser.id).then(setUserProfile);
-        fetchNotesFromCloud(currentUser.id).then((cloudNotes) => {
-          if (cloudNotes && cloudNotes.length > 0) setNotes(cloudNotes);
-        });
-      } else {
-        setUserProfile(null);
-      }
-      setAuthLoading(false);
+      loadUserData(session?.user || null);
     });
 
     return () => {
@@ -201,10 +211,6 @@ export const App: React.FC = () => {
 
           // Note was created on another device (e.g. mobile phone)!
           playSuccessChime();
-          setSyncToast({
-            title: 'Zápisek synchronizován',
-            message: `„${newNote.title}“ byl načten v reálném čase z jiného zařízení.`,
-          });
           return [newNote, ...prev];
         });
       },
@@ -374,6 +380,16 @@ export const App: React.FC = () => {
     } catch {}
   };
 
+  const handleRefreshProfile = async () => {
+    if (!user) return;
+    try {
+      const refreshed = await fetchUserProfile(user.id, true);
+      if (refreshed) {
+        setUserProfile(refreshed);
+      }
+    } catch {}
+  };
+
   const activeMeta = SUBJECTS.find((s) => s.id === selectedSubject) || SUBJECTS[0];
 
   return (
@@ -424,10 +440,10 @@ export const App: React.FC = () => {
             onSyncNow={triggerSync}
           />
 
-          {/* Main Content Area with smooth view transitions */}
-          <main key={activeTab} className="pb-8 pt-2 animate-in fade-in-50 duration-150 ease-out">
+          {/* Main Content Area */}
+          <main className="pb-8 pt-2">
             {activeTab === 'notes' && (
-              <div>
+              <div className="animate-in fade-in duration-150">
                 {/* Poslední zápisky Section */}
                 <RecentNotesList
                   notes={displayNotes}
@@ -442,47 +458,53 @@ export const App: React.FC = () => {
             )}
 
             {activeTab === 'practice' && (
-              <PracticeView
-                notes={displayNotes}
-                allNotes={notes}
-                subjects={SUBJECTS}
-                selectedSubject={selectedSubject}
-                userId={user?.id}
-                onUpdateFlashcards={async (noteId, flashcards) => {
-                  await handleUpdateNote(noteId, { flashcards });
-                }}
-                onUpdateQuiz={async (noteId, quiz) => {
-                  await handleUpdateNote(noteId, { quiz });
-                }}
-                onOpenScan={() => setScanModalOpen(true)}
-              />
+              <div className="animate-in fade-in duration-150">
+                <PracticeView
+                  notes={displayNotes}
+                  allNotes={notes}
+                  subjects={SUBJECTS}
+                  selectedSubject={selectedSubject}
+                  userId={user?.id}
+                  onUpdateFlashcards={async (noteId, flashcards) => {
+                    await handleUpdateNote(noteId, { flashcards });
+                  }}
+                  onUpdateQuiz={async (noteId, quiz) => {
+                    await handleUpdateNote(noteId, { quiz });
+                  }}
+                  onOpenScan={() => setScanModalOpen(true)}
+                />
+              </div>
             )}
 
             {activeTab === 'leaderboard' && (
-              <LeaderboardView
-                user={user || { id: 'guest', email: 'Místní offline sešit' }}
-                profile={userProfile}
-                gamification={gamification}
-                onOpenProfile={() => setActiveTab('profile')}
-                onShowToast={(title, message) => setSyncToast({ title, message })}
-              />
+              <div className="animate-in fade-in duration-150">
+                <LeaderboardView
+                  user={user || { id: 'guest', email: 'Místní offline sešit' }}
+                  profile={userProfile}
+                  gamification={gamification}
+                  onOpenProfile={() => setActiveTab('profile')}
+                />
+              </div>
             )}
 
             {activeTab === 'profile' && (
-              <ProfileView
-                user={user || { id: 'guest', email: 'Místní offline sešit' }}
-                profile={userProfile}
-                totalNotes={notes.length}
-                gamification={gamification}
-                onSignOut={handleSignOut}
-                onDeleteAccount={handleDeleteAccount}
-                onUpdateProfile={(updated) => setUserProfile(updated)}
-                onOpenExport={() => setExportModalOpen(true)}
-                isOnline={isOnline}
-                pendingSyncCount={pendingCount}
-                isSyncing={isSyncing}
-                onSyncNow={triggerSync}
-              />
+              <div className="animate-in fade-in duration-150">
+                <ProfileView
+                  user={user || { id: 'guest', email: 'Místní offline sešit' }}
+                  profile={userProfile}
+                  totalNotes={notes.length}
+                  gamification={gamification}
+                  onSignOut={handleSignOut}
+                  onDeleteAccount={handleDeleteAccount}
+                  onUpdateProfile={(updated) => setUserProfile(updated)}
+                  onRefreshProfile={handleRefreshProfile}
+                  onOpenExport={() => setExportModalOpen(true)}
+                  isOnline={isOnline}
+                  pendingSyncCount={pendingCount}
+                  isSyncing={isSyncing}
+                  onSyncNow={triggerSync}
+                />
+              </div>
             )}
           </main>
 
@@ -544,21 +566,9 @@ export const App: React.FC = () => {
               profile={userProfile}
               userEmail={user?.email || ''}
               onClose={() => setExportModalOpen(false)}
-              onShowToast={(title, message) => setSyncToast({ title, message })}
             />
           )}
         </>
-      )}
-
-      {/* Realtime Multi-device Sync Toast */}
-      {syncToast && (
-        <Toast
-          type="success"
-          title={syncToast.title}
-          message={syncToast.message}
-          onClose={() => setSyncToast(null)}
-          durationMs={4500}
-        />
       )}
     </MobileFrame>
   );

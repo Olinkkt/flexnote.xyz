@@ -318,6 +318,8 @@ export async function signInWithGoogle() {
  * Sign out current user
  */
 export async function signOutUser() {
+  clearProfileCache();
+  clearLeaderboardCache();
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
 }
@@ -331,10 +333,66 @@ export async function deleteUserAccount() {
   await signOutUser().catch(() => {});
 }
 
+// In-memory & localStorage cache for UserProfile
+const PROFILE_CACHE_TTL_MS = 3 * 60 * 1000; // 3 minutes
+interface ProfileCacheItem {
+  data: UserProfile;
+  timestamp: number;
+}
+const profileCache = new Map<string, ProfileCacheItem>();
+const PROFILE_STORAGE_KEY = 'flexnote_cached_user_profile';
+
+export function getCachedUserProfile(userId?: string): UserProfile | null {
+  if (userId && profileCache.has(userId)) {
+    return profileCache.get(userId)!.data;
+  }
+  try {
+    const raw = localStorage.getItem(PROFILE_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as UserProfile;
+      if (!userId || parsed.id === userId) {
+        if (userId) {
+          profileCache.set(userId, { data: parsed, timestamp: Date.now() });
+        }
+        return parsed;
+      }
+    }
+  } catch {}
+  return null;
+}
+
+export function saveCachedUserProfile(profile: UserProfile): void {
+  profileCache.set(profile.id, { data: profile, timestamp: Date.now() });
+  try {
+    localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
+  } catch {}
+}
+
+export function clearProfileCache(): void {
+  profileCache.clear();
+  try {
+    localStorage.removeItem(PROFILE_STORAGE_KEY);
+  } catch {}
+}
+
 /**
- * Fetch profile for a user ID
+ * Fetch profile for a user ID with in-memory & localStorage caching
  */
-export async function fetchUserProfile(userId: string): Promise<UserProfile | null> {
+export async function fetchUserProfile(userId: string, forceRefresh = false): Promise<UserProfile | null> {
+  const now = Date.now();
+  const cached = profileCache.get(userId);
+  if (!forceRefresh && cached && now - cached.timestamp < PROFILE_CACHE_TTL_MS) {
+    return cached.data;
+  }
+
+  // Fallback to localStorage if in-memory cache was lost on reload
+  if (!forceRefresh && !cached) {
+    const local = getCachedUserProfile(userId);
+    if (local) {
+      return local;
+    }
+  }
+
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
@@ -343,9 +401,12 @@ export async function fetchUserProfile(userId: string): Promise<UserProfile | nu
 
   if (error) {
     console.warn('Could not fetch user profile:', error.message);
-    return null;
+    return cached?.data || getCachedUserProfile(userId);
   }
-  return data as UserProfile;
+
+  const profile = data as UserProfile;
+  saveCachedUserProfile(profile);
+  return profile;
 }
 
 /**
@@ -370,7 +431,9 @@ export async function updateUserProfile(
     throw error;
   }
 
-  return data as UserProfile;
+  const profile = data as UserProfile;
+  saveCachedUserProfile(profile);
+  return profile;
 }
 
 // In-memory cache for username availability to avoid duplicate database requests
@@ -531,7 +594,9 @@ export async function updateUserGamification(
       console.warn('Failed to update gamification in cloud:', error.message);
       return null;
     }
-    return data as UserProfile;
+    const updated = data as UserProfile;
+    saveCachedUserProfile(updated);
+    return updated;
   } catch (err) {
     console.warn('Network error updating gamification in cloud:', err);
     return null;
@@ -576,15 +641,78 @@ export async function purchaseStreakFreeze(
   }
 }
 
+// In-memory cache for Leaderboard entries
+interface LeaderboardCacheItem {
+  data: LeaderboardEntry[];
+  timestamp: number;
+}
+const leaderboardCache = new Map<string, LeaderboardCacheItem>();
+const LEADERBOARD_CACHE_TTL_MS = 90 * 1000; // 90 seconds
+
+export function getLeaderboardCacheKey(
+  metric: LeaderboardMetric,
+  timeframe: LeaderboardTimeframe,
+  schoolFilter?: string | null
+): string {
+  const school = schoolFilter && schoolFilter.trim() ? schoolFilter.trim().toLowerCase() : 'all';
+  return `${metric}:${timeframe}:${school}`;
+}
+
 /**
- * Fetch leaderboard entries according to metric, timeframe, and optional school filter
+ * Get synchronously cached leaderboard data if present (0ms response)
+ */
+export function getCachedLeaderboard(
+  metric: LeaderboardMetric,
+  timeframe: LeaderboardTimeframe,
+  schoolFilter?: string | null
+): LeaderboardEntry[] | null {
+  const key = getLeaderboardCacheKey(metric, timeframe, schoolFilter);
+  const item = leaderboardCache.get(key);
+  return item ? item.data : null;
+}
+
+/**
+ * Check if the leaderboard cache is still fresh (< maxAgeMs)
+ */
+export function isLeaderboardCacheFresh(
+  metric: LeaderboardMetric,
+  timeframe: LeaderboardTimeframe,
+  schoolFilter?: string | null,
+  maxAgeMs = 60 * 1000
+): boolean {
+  const key = getLeaderboardCacheKey(metric, timeframe, schoolFilter);
+  const item = leaderboardCache.get(key);
+  if (!item) return false;
+  return Date.now() - item.timestamp < maxAgeMs;
+}
+
+/**
+ * Clear the leaderboard cache
+ */
+export function clearLeaderboardCache(): void {
+  leaderboardCache.clear();
+}
+
+/**
+ * Fetch leaderboard entries according to metric, timeframe, and optional school filter.
+ * Uses smart in-memory caching to eliminate redundant database queries on tab switches.
  */
 export async function fetchLeaderboard(
   metric: LeaderboardMetric,
   timeframe: LeaderboardTimeframe,
   schoolFilter?: string | null,
-  currentUserId?: string
+  currentUserId?: string,
+  forceRefresh = false
 ): Promise<LeaderboardEntry[]> {
+  const key = getLeaderboardCacheKey(metric, timeframe, schoolFilter);
+  const now = Date.now();
+  const cached = leaderboardCache.get(key);
+
+  // Return instantly from cache if fresh and not forced
+  if (!forceRefresh && cached && now - cached.timestamp < LEADERBOARD_CACHE_TTL_MS) {
+    return cached.data;
+  }
+
   try {
     let query = supabase.from('profiles').select('*');
 
@@ -639,13 +767,21 @@ export async function fetchLeaderboard(
     });
 
     // Assign 1-indexed ranks
-    return entries.map((item, idx) => ({
+    const ranked = entries.map((item, idx) => ({
       ...item,
       rank: idx + 1,
     }));
+
+    // Cache the fresh result
+    leaderboardCache.set(key, {
+      data: ranked,
+      timestamp: now,
+    });
+
+    return ranked;
   } catch (err) {
     console.error('Leaderboard fetch failed:', err);
-    return [];
+    return cached?.data || [];
   }
 }
 

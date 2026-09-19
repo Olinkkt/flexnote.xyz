@@ -39,6 +39,7 @@ interface ProfileViewProps {
   onSignOut: () => void;
   onDeleteAccount?: () => Promise<void>;
   onUpdateProfile?: (updated: UserProfile) => void;
+  onRefreshProfile?: () => Promise<void>;
   onOpenExport?: () => void;
   isOnline?: boolean;
   pendingSyncCount?: number;
@@ -71,6 +72,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onSignOut,
   onDeleteAccount,
   onUpdateProfile,
+  onRefreshProfile,
   onOpenExport,
   isOnline = true,
   pendingSyncCount = 0,
@@ -87,8 +89,20 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const [school, setSchool] = useState(profile?.school || '');
   const [grade, setGrade] = useState(profile?.grade || '');
   const [saving, setSaving] = useState(false);
+  const [refreshingProfile, setRefreshingProfile] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>('idle');
+
+  const handleRefreshProfile = async () => {
+    if (!onRefreshProfile || refreshingProfile) return;
+    playPopSound();
+    setRefreshingProfile(true);
+    try {
+      await onRefreshProfile();
+    } finally {
+      setRefreshingProfile(false);
+    }
+  };
 
   // Real-time debounced check of username availability as user types (Instagram / GitHub standard)
   useEffect(() => {
@@ -255,14 +269,30 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
         </div>
 
-        {/* The ONLY Edit Button */}
-        <button
-          onClick={handleOpenEdit}
-          title="Upravit profil"
-          className="p-2.5 rounded-xl border-2 border-duoGray-border hover:border-eagerGreen hover:bg-gray-50 text-duoGray-charcoal active:scale-95 transition cursor-pointer shrink-0"
-        >
-          <Pencil size={15} />
-        </button>
+        {/* Action Buttons: Refresh & Edit */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {onRefreshProfile && (
+            <button
+              onClick={handleRefreshProfile}
+              disabled={refreshingProfile}
+              title="Aktualizovat profil z cloudu"
+              className="p-2.5 rounded-xl border-2 border-duoGray-border hover:border-eagerGreen hover:bg-gray-50 text-duoGray-pencil hover:text-duoGray-charcoal active:scale-95 transition cursor-pointer disabled:opacity-50"
+            >
+              <RefreshCw
+                size={14}
+                className={`transition-transform duration-500 ${refreshingProfile ? 'animate-spin text-eagerGreen' : ''}`}
+              />
+            </button>
+          )}
+
+          <button
+            onClick={handleOpenEdit}
+            title="Upravit profil"
+            className="p-2.5 rounded-xl border-2 border-duoGray-border hover:border-eagerGreen hover:bg-gray-50 text-duoGray-charcoal active:scale-95 transition cursor-pointer shrink-0"
+          >
+            <Pencil size={15} />
+          </button>
+        </div>
       </div>
 
       {/* Clean 2-Card Stats Grid (Notes & Study Time) */}

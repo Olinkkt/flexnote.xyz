@@ -24,11 +24,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             playPopSound();
             onTabChange('notes');
           }}
-          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-duo transition-all duration-150 active:scale-90 cursor-pointer ${
+          className={`flex flex-col items-center justify-center py-1 px-2 rounded-duo transition-colors cursor-pointer ${
             activeTab === 'notes' ? 'text-eagerGreen' : 'text-duoGray-pencil hover:text-duoGray-charcoal'
           }`}
         >
-          <div className={`w-8 h-8 flex items-center justify-center transition-transform duration-200 ${activeTab === 'notes' ? 'animate-tab-pop scale-105' : 'hover:scale-105'}`}>
+          <div className="w-8 h-8 flex items-center justify-center">
             <BookOpen size={21} className={activeTab === 'notes' ? 'stroke-[2.5]' : 'stroke-[2]'} />
           </div>
           <span className="text-[10px] font-feather font-black mt-0.5 tracking-tight">
@@ -42,11 +42,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             playPopSound();
             onTabChange('practice');
           }}
-          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-duo transition-all duration-150 active:scale-90 cursor-pointer ${
+          className={`flex flex-col items-center justify-center py-1 px-2 rounded-duo transition-colors cursor-pointer ${
             activeTab === 'practice' ? 'text-eagerGreen' : 'text-duoGray-pencil hover:text-duoGray-charcoal'
           }`}
         >
-          <div className={`w-8 h-8 flex items-center justify-center transition-transform duration-200 ${activeTab === 'practice' ? 'animate-tab-pop scale-105' : 'hover:scale-105'}`}>
+          <div className="w-8 h-8 flex items-center justify-center">
             <Brain size={21} className={activeTab === 'practice' ? 'stroke-[2.5]' : 'stroke-[2]'} />
           </div>
           <span className="text-[10px] font-feather font-black mt-0.5 tracking-tight">
@@ -60,11 +60,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             playPopSound();
             onOpenScan();
           }}
-          className="flex flex-col items-center justify-center py-0.5 px-1.5 cursor-pointer group active:scale-95 transition-transform duration-100"
+          className="flex flex-col items-center justify-center py-0.5 px-1.5 cursor-pointer group"
           title="Odfotit zápisky"
         >
-          <div className="w-9 h-9 rounded-full bg-eagerGreen border-b-[3px] border-eagerGreen-dark flex items-center justify-center text-white shadow-xs group-hover:brightness-105 group-hover:-translate-y-0.5 active:translate-y-[1px] active:border-b-[1.5px] transition-all duration-150">
-            <Camera size={18} className="stroke-[2.5] transition-transform duration-150 group-hover:scale-110" />
+          <div className="w-9 h-9 rounded-full bg-eagerGreen border-b-[3px] border-eagerGreen-dark flex items-center justify-center text-white shadow-xs group-hover:brightness-105 active:translate-y-[1px] active:border-b-[1.5px] transition-all">
+            <Camera size={18} className="stroke-[2.5]" />
           </div>
           <span className="text-[9.5px] font-feather font-black mt-0.5 text-eagerGreen tracking-tight">
             Odfotit
@@ -77,11 +77,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             playPopSound();
             onTabChange('leaderboard');
           }}
-          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-duo transition-all duration-150 active:scale-90 cursor-pointer ${
+          className={`flex flex-col items-center justify-center py-1 px-2 rounded-duo transition-colors cursor-pointer ${
             activeTab === 'leaderboard' ? 'text-eagerGreen' : 'text-duoGray-pencil hover:text-duoGray-charcoal'
           }`}
         >
-          <div className={`w-8 h-8 flex items-center justify-center transition-transform duration-200 ${activeTab === 'leaderboard' ? 'animate-tab-pop scale-105' : 'hover:scale-105'}`}>
+          <div className="w-8 h-8 flex items-center justify-center">
             <Trophy size={21} className={activeTab === 'leaderboard' ? 'stroke-[2.5]' : 'stroke-[2]'} />
           </div>
           <span className="text-[10px] font-feather font-black mt-0.5 tracking-tight">
@@ -95,11 +95,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({
             playPopSound();
             onTabChange('profile');
           }}
-          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-duo transition-all duration-150 active:scale-90 cursor-pointer ${
+          className={`flex flex-col items-center justify-center py-1 px-2 rounded-duo transition-colors cursor-pointer ${
             activeTab === 'profile' ? 'text-eagerGreen' : 'text-duoGray-pencil hover:text-duoGray-charcoal'
           }`}
         >
-          <div className={`w-8 h-8 flex items-center justify-center transition-transform duration-200 ${activeTab === 'profile' ? 'animate-tab-pop scale-105' : 'hover:scale-105'}`}>
+          <div className="w-8 h-8 flex items-center justify-center">
             <User size={21} className={activeTab === 'profile' ? 'stroke-[2.5]' : 'stroke-[2]'} />
           </div>
           <span className="text-[10px] font-feather font-black mt-0.5 tracking-tight">

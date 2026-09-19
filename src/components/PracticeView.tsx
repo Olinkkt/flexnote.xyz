@@ -263,7 +263,7 @@ export const PracticeView: React.FC<PracticeViewProps> = ({
             return (
               <div
                 key={group.id}
-                className="duo-card p-4 transition-all duration-150 bg-white flex flex-col justify-between gap-3 border-2 border-duoGray-border hover:border-sparkBlue/60 hover:-translate-y-0.5 hover:shadow-md"
+                className="duo-card p-4 transition-all bg-white flex flex-col justify-between gap-3 border-2 border-duoGray-border hover:border-duoGray-charcoal/30"
               >
                 {/* Top Row: Subject Badge + Page count (if multi-page) */}
                 <div className="flex items-center justify-between">

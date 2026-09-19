@@ -10,6 +10,7 @@ import {
   Crown,
   Medal,
   Award,
+  RefreshCw,
 } from 'lucide-react';
 import {
   LeaderboardEntry,
@@ -17,7 +18,12 @@ import {
   LeaderboardTimeframe,
   GamificationState,
 } from '../types/notes';
-import { UserProfile, fetchLeaderboard } from '../services/supabase';
+import {
+  UserProfile,
+  fetchLeaderboard,
+  getCachedLeaderboard,
+  isLeaderboardCacheFresh,
+} from '../services/supabase';
 import { formatStudyDuration } from '../services/studyTracker';
 import { playPopSound, playSuccessChime } from '../utils/audio';
 
@@ -26,7 +32,6 @@ interface LeaderboardViewProps {
   profile: UserProfile | null;
   gamification: GamificationState;
   onOpenProfile?: () => void;
-  onShowToast?: (title: string, message: string) => void;
 }
 
 export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
@@ -34,96 +39,132 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
   profile,
   gamification,
   onOpenProfile,
-  onShowToast,
 }) => {
   const [timeframe, setTimeframe] = useState<LeaderboardTimeframe>('weekly');
   const [metric, setMetric] = useState<LeaderboardMetric>('study_time');
   const [schoolFilterOnly, setSchoolFilterOnly] = useState<boolean>(false);
-  const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+
+  const userSchool = profile?.school?.trim() || null;
+  const filterSchool = schoolFilterOnly ? userSchool : null;
+
+  // Initialize rawEntries synchronously from cache: 0ms render time, no skeleton flash!
+  const [rawEntries, setRawEntries] = useState<LeaderboardEntry[]>(() => {
+    return getCachedLeaderboard(metric, timeframe, filterSchool) || [];
+  });
+  const [loading, setLoading] = useState<boolean>(() => {
+    return !getCachedLeaderboard(metric, timeframe, filterSchool);
+  });
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [copiedFlex, setCopiedFlex] = useState<boolean>(false);
   const [showFlexModal, setShowFlexModal] = useState<boolean>(false);
 
-  const userSchool = profile?.school?.trim() || null;
-
-  // Load leaderboard entries whenever timeframe, metric or school filter changes
+  // SWR: Load or background-refresh leaderboard entries whenever metric, timeframe, or school filter changes
   useEffect(() => {
     let isMounted = true;
-    setLoading(true);
+    const currentSchoolFilter = schoolFilterOnly ? userSchool : null;
+    const cached = getCachedLeaderboard(metric, timeframe, currentSchoolFilter);
+    const isFresh = isLeaderboardCacheFresh(metric, timeframe, currentSchoolFilter, 60 * 1000);
 
-    const filterSchool = schoolFilterOnly ? userSchool : null;
+    if (cached) {
+      setRawEntries(cached);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
 
-    fetchLeaderboard(metric, timeframe, filterSchool, user.id)
-      .then((data) => {
-        if (!isMounted) return;
-
-        // Ensure current user entry reflects latest local gamification numbers
-        const currentUserId = user.id;
-        let mapped = data.map((entry) => {
-          if (entry.id === currentUserId || entry.isCurrentUser) {
-            return {
-              ...entry,
-              isCurrentUser: true,
-              username: profile?.username || entry.username || 'já',
-              fullName: profile?.full_name || entry.fullName,
-              school: profile?.school || entry.school,
-              studyTimeSeconds: gamification.studyTimeSeconds,
-              weeklyStudySeconds: gamification.weeklyStudySeconds,
-              diamonds: gamification.diamonds,
-              weeklyDiamonds: gamification.weeklyDiamonds,
-              streakDays: gamification.streakDays,
-            };
-          }
-          return entry;
+    // Only query network if no cache exists or if cache is older than 60s
+    if (!cached || !isFresh) {
+      fetchLeaderboard(metric, timeframe, currentSchoolFilter, user.id, false)
+        .then((data) => {
+          if (!isMounted) return;
+          setRawEntries(data);
+          setLoading(false);
+        })
+        .catch(() => {
+          if (isMounted) setLoading(false);
         });
-
-        // If current user is not in query results, add them with local stats (if matching school filter)
-        const hasCurrentUser = mapped.some((entry) => entry.id === currentUserId || entry.isCurrentUser);
-        if (!hasCurrentUser && (!filterSchool || (profile?.school && profile.school.trim().toLowerCase() === filterSchool.toLowerCase()))) {
-          mapped.push({
-            id: currentUserId,
-            username: profile?.username || user.email?.split('@')[0] || 'já',
-            fullName: profile?.full_name || null,
-            avatarUrl: profile?.avatar_url || null,
-            school: profile?.school || null,
-            grade: profile?.grade || null,
-            studyTimeSeconds: gamification.studyTimeSeconds,
-            weeklyStudySeconds: gamification.weeklyStudySeconds,
-            diamonds: gamification.diamonds,
-            weeklyDiamonds: gamification.weeklyDiamonds,
-            streakDays: gamification.streakDays,
-            rank: 0,
-            isCurrentUser: true,
-          });
-        }
-
-        // Re-sort with merged current user numbers
-        mapped.sort((a, b) => {
-          if (metric === 'study_time') {
-            const valA = timeframe === 'weekly' ? a.weeklyStudySeconds : a.studyTimeSeconds;
-            const valB = timeframe === 'weekly' ? b.weeklyStudySeconds : b.studyTimeSeconds;
-            return valB - valA;
-          }
-          if (metric === 'diamonds') {
-            const valA = timeframe === 'weekly' ? a.weeklyDiamonds : a.diamonds;
-            const valB = timeframe === 'weekly' ? b.weeklyDiamonds : b.diamonds;
-            return valB - valA;
-          }
-          return b.streakDays - a.streakDays;
-        });
-
-        const reRanked = mapped.map((item, idx) => ({ ...item, rank: idx + 1 }));
-        setEntries(reRanked);
-        setLoading(false);
-      })
-      .catch(() => {
-        if (isMounted) setLoading(false);
-      });
+    }
 
     return () => {
       isMounted = false;
     };
-  }, [timeframe, metric, schoolFilterOnly, userSchool, user.id, gamification, profile]);
+  }, [timeframe, metric, schoolFilterOnly, userSchool, user.id]);
+
+  // Manual refresh handler
+  const handleManualRefresh = async () => {
+    playPopSound();
+    setIsRefreshing(true);
+    const currentSchoolFilter = schoolFilterOnly ? userSchool : null;
+    try {
+      const fresh = await fetchLeaderboard(metric, timeframe, currentSchoolFilter, user.id, true);
+      setRawEntries(fresh);
+    } catch {
+      // Graceful fallback: maintain existing cached data
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Compute live ranking with local gamification stats in memory (0 network requests on study/gem tick!)
+  const entries = useMemo(() => {
+    const currentSchoolFilter = schoolFilterOnly ? userSchool : null;
+    const currentUserId = user.id;
+
+    let mapped = rawEntries.map((entry) => {
+      if (entry.id === currentUserId || entry.isCurrentUser) {
+        return {
+          ...entry,
+          isCurrentUser: true,
+          username: profile?.username || entry.username || 'já',
+          fullName: profile?.full_name || entry.fullName,
+          school: profile?.school || entry.school,
+          studyTimeSeconds: gamification.studyTimeSeconds,
+          weeklyStudySeconds: gamification.weeklyStudySeconds,
+          diamonds: gamification.diamonds,
+          weeklyDiamonds: gamification.weeklyDiamonds,
+          streakDays: gamification.streakDays,
+        };
+      }
+      return entry;
+    });
+
+    // If current user is not in query results, add them with local stats (if matching school filter)
+    const hasCurrentUser = mapped.some((entry) => entry.id === currentUserId || entry.isCurrentUser);
+    if (!hasCurrentUser && (!currentSchoolFilter || (profile?.school && profile.school.trim().toLowerCase() === currentSchoolFilter.toLowerCase()))) {
+      mapped.push({
+        id: currentUserId,
+        username: profile?.username || user.email?.split('@')[0] || 'já',
+        fullName: profile?.full_name || null,
+        avatarUrl: profile?.avatar_url || null,
+        school: profile?.school || null,
+        grade: profile?.grade || null,
+        studyTimeSeconds: gamification.studyTimeSeconds,
+        weeklyStudySeconds: gamification.weeklyStudySeconds,
+        diamonds: gamification.diamonds,
+        weeklyDiamonds: gamification.weeklyDiamonds,
+        streakDays: gamification.streakDays,
+        rank: 0,
+        isCurrentUser: true,
+      });
+    }
+
+    // Re-sort with merged current user numbers
+    mapped.sort((a, b) => {
+      if (metric === 'study_time') {
+        const valA = timeframe === 'weekly' ? a.weeklyStudySeconds : a.studyTimeSeconds;
+        const valB = timeframe === 'weekly' ? b.weeklyStudySeconds : b.studyTimeSeconds;
+        return valB - valA;
+      }
+      if (metric === 'diamonds') {
+        const valA = timeframe === 'weekly' ? a.weeklyDiamonds : a.diamonds;
+        const valB = timeframe === 'weekly' ? b.weeklyDiamonds : b.diamonds;
+        return valB - valA;
+      }
+      return b.streakDays - a.streakDays;
+    });
+
+    return mapped.map((item, idx) => ({ ...item, rank: idx + 1 }));
+  }, [rawEntries, metric, timeframe, schoolFilterOnly, userSchool, user.id, gamification, profile]);
 
   // Current user's rank and entry
   const currentUserEntry = useMemo(() => {
@@ -186,7 +227,6 @@ Trumfneš mě?`;
     playSuccessChime();
     navigator.clipboard.writeText(generateFlexText());
     setCopiedFlex(true);
-    onShowToast?.('Zkopírováno!', 'Statistiky jsou připraveny k chlubení před spolužáky.');
     setTimeout(() => setCopiedFlex(false), 2500);
   };
 
@@ -215,17 +255,32 @@ Trumfneš mě?`;
           </p>
         </div>
 
-        {/* Single prominent 3D Flexit Button */}
-        <button
-          onClick={() => {
-            playPopSound();
-            setShowFlexModal(true);
-          }}
-          className="duo-btn duo-btn-white px-3.5 py-2 text-xs font-feather font-black text-orange-600 border-2 border-orange-200 border-b-[4px] border-b-orange-400 hover:bg-orange-50 flex items-center gap-1.5 shadow-xs transition"
-        >
-          <Share2 size={13} className="stroke-[2.5]" />
-          <span>Flexit</span>
-        </button>
+        <div className="flex items-center gap-1.5">
+          {/* Subtle Manual Refresh Button */}
+          <button
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            title="Aktualizovat žebříček"
+            className="p-2 rounded-xl bg-white border-2 border-duoGray-border border-b-[3px] hover:border-duoGray-faded text-duoGray-pencil hover:text-duoGray-charcoal active:translate-y-[1px] active:border-b-2 transition cursor-pointer shadow-2xs disabled:opacity-50 shrink-0"
+          >
+            <RefreshCw
+              size={14}
+              className={`transition-transform duration-500 ${isRefreshing ? 'animate-spin text-eagerGreen' : ''}`}
+            />
+          </button>
+
+          {/* Single prominent 3D Flexit Button */}
+          <button
+            onClick={() => {
+              playPopSound();
+              setShowFlexModal(true);
+            }}
+            className="duo-btn duo-btn-white px-3.5 py-2 text-xs font-feather font-black text-orange-600 border-2 border-orange-200 border-b-[4px] border-b-orange-400 hover:bg-orange-50 flex items-center gap-1.5 shadow-xs transition"
+          >
+            <Share2 size={13} className="stroke-[2.5]" />
+            <span>Flexit</span>
+          </button>
+        </div>
       </div>
 
       {/* Metric Selector - Tactile Duo 3D Buttons */}
@@ -318,7 +373,6 @@ Trumfneš mě?`;
               } else {
                 if (!userSchool) {
                   onOpenProfile?.();
-                  onShowToast?.('Vyplň svou školu', 'Pro filtrování spolužáků si nejprve v profilu nastav školu.');
                   return;
                 }
                 setSchoolFilterOnly(true);
@@ -383,7 +437,7 @@ Trumfneš mě?`;
               <div className="w-full flex flex-col items-center animate-in slide-in-from-bottom-3 duration-200">
                 <div className="relative mb-1.5 flex flex-col items-center">
                   <div className="absolute -top-6 left-0 right-0 flex justify-center pointer-events-none">
-                    <Crown size={20} className="text-amber-500 fill-amber-400 drop-shadow-2xs animate-crown" />
+                    <Crown size={20} className="text-amber-500 fill-amber-400 drop-shadow-2xs" />
                   </div>
                   <div className="w-14 h-14 rounded-full bg-amber-50 border-2 border-amber-400 flex items-center justify-center font-feather font-black text-lg text-amber-800 shadow-xs">
                     <Trophy size={22} className="text-amber-500 fill-amber-300" />

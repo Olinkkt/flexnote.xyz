@@ -38,7 +38,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
       <div className="flex items-center justify-between gap-2">
         {/* Left: App Title & Note Count */}
         <div className="flex items-center gap-2">
-          <div className="w-8 sm:w-9 h-8 sm:h-9 rounded-duo bg-storybookGreen border-2 border-eagerGreen flex items-center justify-center text-eagerGreen shadow-xs shrink-0 transition-transform duration-150 hover:scale-105 active:scale-95">
+          <div className="w-8 sm:w-9 h-8 sm:h-9 rounded-duo bg-storybookGreen border-2 border-eagerGreen flex items-center justify-center text-eagerGreen shadow-xs shrink-0">
             <BookOpen size={18} className="stroke-[2.5]" />
           </div>
           <div>
@@ -62,14 +62,9 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
               onOpenStreakModal?.();
             }}
             title="Denní série (klikni pro detail)"
-            className="flex items-center gap-1 px-2 py-1 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-400/40 border-b-[3px] active:translate-y-[1px] active:border-b-2 hover:border-amber-400/80 active:scale-95 text-duoGray-charcoal transition-all duration-150 cursor-pointer shrink-0"
+            className="flex items-center gap-1 px-2 py-1 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-400/40 border-b-[3px] active:translate-y-[1px] active:border-b-2 text-duoGray-charcoal transition cursor-pointer shrink-0"
           >
-            <Flame
-              size={15}
-              className={`text-orange-500 fill-orange-400 transition-transform ${
-                streakDays > 0 ? 'animate-flame' : 'opacity-60'
-              }`}
-            />
+            <Flame size={15} className="text-orange-500 fill-orange-400" />
             <span className="font-feather font-black text-xs text-orange-600">
               {streakDays}
             </span>
@@ -78,9 +73,9 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           {/* Diamonds Gem Badge */}
           <div
             title="Drahokamy"
-            className="flex items-center gap-1 px-2 py-1 rounded-xl bg-sky-50 border-2 border-sky-400/40 border-b-[3px] text-duoGray-charcoal select-none shrink-0 transition-all duration-150 hover:scale-105 hover:border-sky-400/80 group"
+            className="flex items-center gap-1 px-2 py-1 rounded-xl bg-sky-50 border-2 border-sky-400/40 border-b-[3px] text-duoGray-charcoal select-none shrink-0"
           >
-            <Sparkles size={14} className="text-sparkBlue fill-sparkBlue transition-transform duration-200 group-hover:rotate-12 group-hover:scale-110" />
+            <Sparkles size={14} className="text-sparkBlue fill-sparkBlue" />
             <span className="font-feather font-black text-xs text-sparkBlue">
               {diamonds}
             </span>

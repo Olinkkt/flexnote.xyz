@@ -59,17 +59,13 @@ h1, h2, h3, .font-feather {
   font-family: var(--font-feather);
   font-weight: 800;
   border-radius: 14px;
-  transition: transform 0.1s cubic-bezier(0.34, 1.4, 0.64, 1), box-shadow 0.1s ease, filter 0.1s ease;
+  transition: all 0.08s ease;
   user-select: none;
   cursor: pointer;
 }
 
-.duo-btn:hover {
-  filter: brightness(1.04);
-}
-
 .duo-btn:active {
-  transform: translateY(2px) scale(0.985);
+  transform: translateY(3px);
 }
 
 .duo-btn-green {
@@ -140,21 +136,11 @@ h1, h2, h3, .font-feather {
   border: 2px solid #e5e5e5;
   border-bottom: 4px solid #e5e5e5;
   border-radius: 16px;
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
-}
-
-.duo-card-interactive {
-  transition: transform 0.14s cubic-bezier(0.34, 1.4, 0.64, 1), box-shadow 0.14s ease, border-color 0.14s ease;
-  cursor: pointer;
-}
-
-.duo-card-interactive:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
 
 .duo-card-interactive:active {
-  transform: translateY(2px) scale(0.988);
+  transform: translateY(2px);
   border-bottom-width: 2px;
 }
 
@@ -192,51 +178,6 @@ h1, h2, h3, .font-feather {
 
 .pulse-duo {
   animation: duoPulse 2s infinite ease-in-out;
-}
-
-/* Subtle Streak Flame Breathing */
-@keyframes flameBreathing {
-  0%, 100% {
-    transform: scale(1) rotate(0deg);
-    filter: drop-shadow(0 0 2px rgba(249, 115, 22, 0.3));
-  }
-  50% {
-    transform: scale(1.14) rotate(-2deg);
-    filter: drop-shadow(0 0 6px rgba(249, 115, 22, 0.65));
-  }
-}
-
-.animate-flame {
-  animation: flameBreathing 2.2s infinite ease-in-out;
-  transform-origin: center bottom;
-  display: inline-block;
-}
-
-/* Tactile Tab Spring Pop */
-@keyframes tabSpringPop {
-  0% { transform: scale(0.88); }
-  50% { transform: scale(1.12); }
-  100% { transform: scale(1); }
-}
-
-.animate-tab-pop {
-  animation: tabSpringPop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-/* Subtle Crown Floating Animation for Leaderboard Champion */
-@keyframes crownFloat {
-  0%, 100% {
-    transform: translateY(0) rotate(0deg);
-  }
-  50% {
-    transform: translateY(-4px) rotate(3deg);
-  }
-}
-
-.animate-crown {
-  animation: crownFloat 2.6s infinite ease-in-out;
-  transform-origin: center bottom;
-  display: inline-block;
 }
 
 /* Markdown Reader Typography & Formatting */

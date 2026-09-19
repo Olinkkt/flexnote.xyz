@@ -760,7 +760,7 @@ export const QuizModal: React.FC<QuizModalProps> = ({
             {/* Feedback Message */}
             <div className="w-full sm:w-auto flex-1 min-w-0">
               {isAnswerChecked ? (
-                <div className="flex items-start gap-3 animate-in zoom-in-95 duration-150">
+                <div className="flex items-start gap-3">
                   {isAnswerCorrect ? (
                     <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-eagerGreen shadow-xs shrink-0">
                       <CheckCircle2 size={24} />
