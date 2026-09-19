@@ -82,9 +82,21 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
   const subjectMeta = subjects.find((s) => s.id === subjectId) || subjects[0];
   const displayTitle = customSessionTitle || (topicGroup ? topicGroup.name : note?.title || 'Kartičky');
 
-  // If no cards exist initially for single note, generate them automatically on first open
+  const isFallbackCard = (c: FlashcardItem) => {
+    return (
+      c.id?.includes('summary-') ||
+      c.back?.includes('*Použití v tématu ') ||
+      c.back?.includes('*Předmět: ') ||
+      c.front?.startsWith('Jak zní matematický vzorec pro **') ||
+      c.front?.startsWith('Co znamená pojem **') ||
+      c.front?.startsWith('O čem pojednává zápisek **')
+    );
+  };
+
+  // If no cards exist initially or if note has old rule-based fallback cards, generate smart cards with AI
   useEffect(() => {
-    if (!customCards && cards.length === 0) {
+    const hasOnlyFallbackCards = cards.length > 0 && cards.every(isFallbackCard);
+    if (!customCards && (cards.length === 0 || hasOnlyFallbackCards)) {
       handleGenerateCards();
     }
   }, []);
@@ -284,7 +296,18 @@ export const FlashcardModal: React.FC<FlashcardModalProps> = ({
             </span>
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
+            {!isCompleted && !isGenerating && (
+              <button
+                type="button"
+                onClick={handleGenerateCards}
+                title="Znovu vygenerovat kartičky pomocí AI"
+                className="px-2.5 py-1.5 rounded-duo border-2 border-duoGray-border hover:border-sparkBlue hover:bg-sparkBlue/5 text-duoGray-charcoal hover:text-sparkBlue transition text-xs font-feather font-black flex items-center gap-1.5 cursor-pointer active:scale-95"
+              >
+                <Sparkles size={14} className="text-sparkBlue" />
+                <span className="hidden sm:inline">AI Přegenerovat</span>
+              </button>
+            )}
             <button
               onClick={() => {
                 playPopSound();

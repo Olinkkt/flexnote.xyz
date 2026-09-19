@@ -6,7 +6,6 @@ import { SubjectIcon } from './SubjectIcon';
 import { Toast, ToastProps } from './Toast';
 import { extractNoteFromImage } from '../services/gemini';
 import { uploadNoteImage } from '../services/supabase';
-import { generateOfflineFlashcards } from '../services/flashcards';
 import { validateFileSize, compressAndPrepareImage } from '../utils/imageCompressor';
 import { checkRateLimit, recordRateLimitUsage } from '../services/rateLimiter';
 
@@ -270,9 +269,6 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote, userI
       tags: [selectedSubject, topic.trim() || 'Zápisky', 'Nový'],
       markdown: extractedData?.markdown || `# ${defaultTitle}\n\n- Digitalizovaný text ze sešitu.\n- Předmět: **${subjectName}**`,
     };
-
-    // Automatically generate initial flashcards from formulas and concepts
-    newNote.flashcards = generateOfflineFlashcards(newNote);
 
     onSaveNote(newNote);
     onClose();

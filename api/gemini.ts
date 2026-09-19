@@ -1,11 +1,16 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { GoogleGenAI, Type } from '@google/genai';
 
 export const config = {
   maxDuration: 60,
 };
 
 async function callOpenAi(apiKey: string, body: Record<string, any>) {
-  const baseUrl = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '');
+  const isOpenRouter = apiKey.trim().startsWith('sk-or-');
+  const baseUrl = (
+    process.env.OPENAI_BASE_URL ||
+    (isOpenRouter ? 'https://openrouter.ai/api/v1' : 'https://api.openai.com/v1')
+  ).replace(/\/$/, '');
   const endpoint = `${baseUrl}/chat/completions`;
 
   const headers: Record<string, string> = {
@@ -13,10 +18,20 @@ async function callOpenAi(apiKey: string, body: Record<string, any>) {
     Authorization: `Bearer ${apiKey.trim()}`,
   };
 
+  if (isOpenRouter) {
+    headers['HTTP-Referer'] = 'https://flexnote.oliverseidl.dev';
+    headers['X-Title'] = 'Flexnote';
+  }
+
+  const payloadBody = { ...body };
+  if (isOpenRouter && !payloadBody.model.startsWith('openai/')) {
+    payloadBody.model = `openai/${payloadBody.model}`;
+  }
+
   const response = await fetch(endpoint, {
     method: 'POST',
     headers,
-    body: JSON.stringify(body),
+    body: JSON.stringify(payloadBody),
   });
 
   if (!response.ok) {
@@ -44,18 +59,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Support whichever env variable the user has configured
   const apiKey =
     process.env.OPENAI_API_KEY ||
-    process.env.GEMINI_API_KEY ||
-    process.env.OPENROUTER_API_KEY ||
-    process.env.VITE_GEMINI_API_KEY ||
     process.env.VITE_OPENAI_API_KEY ||
-    process.env.VITE_OPENROUTER_API_KEY;
+    process.env.OPENROUTER_API_KEY ||
+    process.env.VITE_OPENROUTER_API_KEY ||
+    process.env.GEMINI_API_KEY ||
+    process.env.VITE_GEMINI_API_KEY;
 
   if (!apiKey || apiKey.trim() === '') {
     return res.status(500).json({
-      error: 'API klíč není nastaven. Zadej prosím klíč v proměnných prostředí Vercelu.',
+      error: 'API klíč není nastaven. Zadej prosím OPENAI_API_KEY v proměnných prostředí.',
     });
   }
 
@@ -64,6 +78,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!action || !payload) {
     return res.status(400).json({ error: 'Missing action or payload in request body.' });
   }
+
+  const isGoogleKey = apiKey.trim().startsWith('AIza') || apiKey.trim().startsWith('AQ.');
 
   try {
     if (action === 'ocr') {
@@ -91,6 +107,35 @@ VÝSTUP MUSÍ BÝT VÝHRADNĚ VALIDNÍ JSON BEZ TEXTU OKOLO:
   "summary": "Stručné shrnutí 1-2 větami",
   "markdown": "Kompletní strukturovaný zápisek v Markdownu s KaTeX vzorci"
 }`;
+
+      if (isGoogleKey) {
+        let mimeType = 'image/jpeg';
+        let base64Data = imageBase64;
+        if (imageBase64.includes(';base64,')) {
+          const parts = imageBase64.split(';base64,');
+          mimeType = parts[0].replace('data:', '') || 'image/jpeg';
+          base64Data = parts[1];
+        }
+        const ai = new GoogleGenAI({ apiKey: apiKey.trim() });
+        const response = await ai.models.generateContent({
+          model: 'gemini-3.6-flash',
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                { inlineData: { mimeType, data: base64Data } },
+                { text: 'Převeď prosím tento zápisek ze sešitu do strukturovaného Markdownu s KaTeX vzorci a identifikuj předmět a širší téma.' },
+              ],
+            },
+          ],
+          config: {
+            systemInstruction,
+            temperature: 0.2,
+            responseMimeType: 'application/json',
+          },
+        });
+        return res.status(200).json({ result: JSON.parse(response.text || '{}') });
+      }
 
       const result = await callOpenAi(apiKey, {
         model: 'gpt-5-mini',
@@ -138,6 +183,25 @@ VÝSTUP MUSÍ BÝT VÝHRADNĚ VALIDNÍ JSON POLE:
   }
 ]`;
 
+      if (isGoogleKey) {
+        const ai = new GoogleGenAI({ apiKey: apiKey.trim() });
+        const response = await ai.models.generateContent({
+          model: 'gemini-3.6-flash',
+          contents: [
+            {
+              role: 'user',
+              parts: [{ text: `Vytvoř výukové flashcards ze zápisků:\nTéma: ${promptTitle}\nPředmět: ${subject}\n\n${text}` }],
+            },
+          ],
+          config: {
+            systemInstruction,
+            temperature: 0.3,
+            responseMimeType: 'application/json',
+          },
+        });
+        return res.status(200).json({ result: JSON.parse(response.text || '[]') });
+      }
+
       const result = await callOpenAi(apiKey, {
         model: 'gpt-5.6-luna',
         messages: [
@@ -170,6 +234,25 @@ DŮLEŽITÉ:
 - Bezchybná spisovná čeština.
 - Vrať VÝHRADNĚ validní JSON pole.`;
 
+      if (isGoogleKey) {
+        const ai = new GoogleGenAI({ apiKey: apiKey.trim() });
+        const response = await ai.models.generateContent({
+          model: 'gemini-3.6-flash',
+          contents: [
+            {
+              role: 'user',
+              parts: [{ text: `Vytvoř cvičný test:\nTitul: ${promptTitle}\nPředmět: ${subject}\n\n${text}` }],
+            },
+          ],
+          config: {
+            systemInstruction,
+            temperature: 0.3,
+            responseMimeType: 'application/json',
+          },
+        });
+        return res.status(200).json({ result: JSON.parse(response.text || '[]') });
+      }
+
       const result = await callOpenAi(apiKey, {
         model: 'gpt-5.6-luna',
         messages: [
@@ -195,4 +278,3 @@ DŮLEŽITÉ:
     });
   }
 }
-

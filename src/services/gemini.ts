@@ -1,3 +1,4 @@
+import { GoogleGenAI } from '@google/genai';
 import { SubjectType } from '../types/notes';
 
 export interface ExtractedNoteResult {
@@ -18,17 +19,31 @@ export class GeminiServiceError extends Error {
 }
 
 async function callClientOpenAi(apiKey: string, body: Record<string, any>) {
-  const endpoint = 'https://api.openai.com/v1/chat/completions';
+  const isOpenRouter = apiKey.trim().startsWith('sk-or-');
+  const baseUrl = (
+    (isOpenRouter ? 'https://openrouter.ai/api/v1' : 'https://api.openai.com/v1')
+  ).replace(/\/$/, '');
+  const endpoint = `${baseUrl}/chat/completions`;
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${apiKey.trim()}`,
   };
 
+  if (isOpenRouter) {
+    headers['HTTP-Referer'] = 'https://flexnote.oliverseidl.dev';
+    headers['X-Title'] = 'Flexnote';
+  }
+
+  const payloadBody = { ...body };
+  if (isOpenRouter && !payloadBody.model.startsWith('openai/')) {
+    payloadBody.model = `openai/${payloadBody.model}`;
+  }
+
   const response = await fetch(endpoint, {
     method: 'POST',
     headers,
-    body: JSON.stringify(body),
+    body: JSON.stringify(payloadBody),
   });
 
   if (!response.ok) {
@@ -71,15 +86,15 @@ export async function callGeminiApi(action: 'ocr' | 'flashcards' | 'quiz', paylo
     const errData = await response.json().catch(() => ({}));
     throw new Error(errData?.error || `Chyba serveru (${response.status})`);
   } catch (err: any) {
-    // If client has a local VITE API key, fallback to client-side call
+    // If client has a local API key, fallback to direct client-side call
     const clientKey =
       import.meta.env.VITE_OPENAI_API_KEY ||
-      import.meta.env.VITE_GEMINI_API_KEY ||
       import.meta.env.VITE_OPENROUTER_API_KEY ||
+      import.meta.env.VITE_GEMINI_API_KEY ||
       import.meta.env.VITE_GOOGLE_API_KEY;
     if (clientKey && !clientKey.includes('your_gemini_api_key_here') && !clientKey.includes('your_openrouter_api_key_here')) {
-      console.warn('Backend /api/gemini failed, using direct client-side fallback:', err.message);
-      return callGeminiClientDirect(action, payload, clientKey);
+      console.warn('Backend /api/gemini failed, using direct client-side call:', err.message);
+      return callClientDirect(action, payload, clientKey);
     }
     throw new GeminiServiceError('API_ERROR', err?.message || 'Chyba při volání AI API.');
   }
@@ -88,11 +103,83 @@ export async function callGeminiApi(action: 'ocr' | 'flashcards' | 'quiz', paylo
 /**
  * Client-side direct call fallback if running purely statically without serverless function
  */
-async function callGeminiClientDirect(
+async function callClientDirect(
   action: 'ocr' | 'flashcards' | 'quiz',
   payload: Record<string, any>,
   apiKey: string
 ): Promise<any> {
+  const isGoogleKey = apiKey.trim().startsWith('AIza') || apiKey.trim().startsWith('AQ.');
+
+  if (isGoogleKey) {
+    const ai = new GoogleGenAI({ apiKey: apiKey.trim() });
+    if (action === 'ocr') {
+      const { imageBase64 } = payload;
+      let mimeType = 'image/jpeg';
+      let base64Data = imageBase64;
+      if (imageBase64.includes(';base64,')) {
+        const parts = imageBase64.split(';base64,');
+        mimeType = parts[0].replace('data:', '') || 'image/jpeg';
+        base64Data = parts[1];
+      }
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.6-flash',
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              { inlineData: { mimeType, data: base64Data } },
+              { text: 'Převeď prosím tento zápisek ze sešitu do strukturovaného Markdownu s KaTeX vzorci a identifikuj předmět a širší téma.' },
+            ],
+          },
+        ],
+        config: {
+          systemInstruction: `Jsi Flexnote AI OCR engine. Převeď sešit do Markdownu s KaTeX vzorci. Vrať validní JSON objekt.`,
+          temperature: 0.2,
+          responseMimeType: 'application/json',
+        },
+      });
+      return JSON.parse(response.text || '{}');
+    }
+
+    if (action === 'flashcards') {
+      const { text, promptTitle, subject } = payload;
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.6-flash',
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: `Vytvoř výukové flashcards ze zápisků:\nTéma: ${promptTitle}\nPředmět: ${subject}\n\n${text}` }],
+          },
+        ],
+        config: {
+          systemInstruction: `Jsi výukový asistent aplikace Flexnote pro kartičky (Flashcards). Vytvoř 4 až 8 kartiček. Vzorce v KaTeXu. Validní JSON pole.`,
+          temperature: 0.3,
+          responseMimeType: 'application/json',
+        },
+      });
+      return JSON.parse(response.text || '[]');
+    }
+
+    if (action === 'quiz') {
+      const { text, promptTitle, subject } = payload;
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.6-flash',
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: `Vytvoř cvičný test:\nTitul: ${promptTitle}\nPředmět: ${subject}\n\n${text}` }],
+          },
+        ],
+        config: {
+          systemInstruction: `Jsi pedagogický asistent Flexnote. Vytvoř test. Validní JSON pole.`,
+          temperature: 0.3,
+          responseMimeType: 'application/json',
+        },
+      });
+      return JSON.parse(response.text || '[]');
+    }
+  }
+
   if (action === 'ocr') {
     const { imageBase64 } = payload;
     const systemInstruction = `Jsi Flexnote AI OCR engine specializovaný na převod fotografií školních sešitů do přehledného studijního Markdownu.
