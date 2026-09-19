@@ -206,7 +206,7 @@ VÝSTUP MUSÍ BÝT VÝHRADNĚ VALIDNÍ JSON POLE BEZ DALŠÍHO TEXTU OKOLO:
         'X-Title': 'Flexnote',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.0-flash-exp:free',
+        model: 'google/gemini-2.5-flash-lite',
         messages: [
           {
             role: 'system',
@@ -218,6 +218,7 @@ VÝSTUP MUSÍ BÝT VÝHRADNĚ VALIDNÍ JSON POLE BEZ DALŠÍHO TEXTU OKOLO:
           },
         ],
         temperature: 0.3,
+        max_tokens: 2000,
       }),
     });
 
@@ -300,7 +301,7 @@ PRAVIDLA PRO TVORBU KARTIČEK:
         'X-Title': 'Flexnote',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.0-flash-exp:free',
+        model: 'google/gemini-2.5-flash-lite',
         messages: [
           {
             role: 'system',
@@ -312,6 +313,7 @@ PRAVIDLA PRO TVORBU KARTIČEK:
           },
         ],
         temperature: 0.3,
+        max_tokens: 2000,
       }),
     });
 

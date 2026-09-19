@@ -131,35 +131,47 @@ async function callOpenRouterWithRetry(apiKey: string, body: unknown, retries = 
   throw new OpenRouterError('NETWORK_ERROR', 'Nepodařilo se navázat spojení po opakovaném pokusu.');
 }
 
-  const response = await callOpenRouterWithRetry(
-    apiKey,
-    {
-      model: 'dots-studio/dots-3-note-preview:free',
-      messages: [
-        {
-          role: 'system',
-          content: systemPrompt,
-        },
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: 'Převeď prosím tento zápisek ze sešitu do strukturovaného Markdownu s KaTeX vzorci a identifikuj předmět.',
+  const payload = {
+    model: 'google/gemini-2.5-flash',
+    messages: [
+      {
+        role: 'system',
+        content: systemPrompt,
+      },
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: 'Převeď prosím tento zápisek ze sešitu do strukturovaného Markdownu s KaTeX vzorci a identifikuj předmět.',
+          },
+          {
+            type: 'image_url',
+            image_url: {
+              url: imageBase64,
             },
-            {
-              type: 'image_url',
-              image_url: {
-                url: imageBase64,
-              },
-            },
-          ],
-        },
-      ],
-      temperature: 0.2,
-    },
-    1
-  );
+          },
+        ],
+      },
+    ],
+    temperature: 0.2,
+    max_tokens: 2500,
+  };
+
+  let response = await callOpenRouterWithRetry(apiKey, payload, 1);
+
+  // Fallback to gemini-2.5-flash-lite if gemini-2.5-flash encounters an error
+  if (!response.ok) {
+    console.warn(`google/gemini-2.5-flash failed with status ${response.status}, trying google/gemini-2.5-flash-lite...`);
+    response = await callOpenRouterWithRetry(
+      apiKey,
+      {
+        ...payload,
+        model: 'google/gemini-2.5-flash-lite',
+      },
+      1
+    );
+  }
 
   if (!response.ok) {
     let errorDetail = '';
@@ -179,7 +191,7 @@ async function callOpenRouterWithRetry(apiKey: string, body: unknown, retries = 
     if (response.status === 429) {
       throw new OpenRouterError(
         'RATE_LIMITED',
-        'Dosažen limit bezplatného modelu Dots3-Note-Preview (429 Rate Limit). Počkej chvíli a zkus to znovu.'
+        'Dosažen limit požadavků na model (429 Rate Limit). Počkej chvíli a zkus to znovu.'
       );
     }
     throw new OpenRouterError(
@@ -221,7 +233,7 @@ function parseModelOutput(content: string): ExtractedNoteResult {
       title: parsed.title || 'Digitalizovaný zápisek',
       topic: parsed.topic ? String(parsed.topic).trim() : undefined,
       subject,
-      summary: parsed.summary || 'Zápisky převedené pomocí AI modelu Dots3-Note-Preview.',
+      summary: parsed.summary || 'Zápisky převedené pomocí Gemini AI.',
       markdown: parsed.markdown || content,
     };
   } catch {

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Camera, X, Loader2, Sparkles, FileText, ArrowRight, HelpCircle, ChevronRight, Check, Zap, WifiOff, RotateCcw, AlertTriangle } from 'lucide-react';
+import { Camera, X, Loader2, Sparkles, FileText, ArrowRight, HelpCircle, ChevronRight, Check, WifiOff, RotateCcw, AlertTriangle } from 'lucide-react';
 import { NoteItem, SubjectType } from '../types/notes';
 import { playPopSound, playSuccessChime } from '../utils/audio';
 import { SubjectIcon } from './SubjectIcon';
@@ -34,13 +34,11 @@ const AVAILABLE_CLASSES: { id: SubjectType; name: string }[] = [
 export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote, userId, existingNotes }) => {
   const [status, setStatus] = useState<'idle' | 'processing' | 'ready' | 'error'>('idle');
   const [lastErrorMsg, setLastErrorMsg] = useState<string>('');
-  const [processingMessage, setProcessingMessage] = useState('Model Dots3-Note čte text a KaTeX vzorce...');
+  const [processingMessage, setProcessingMessage] = useState('Gemini AI čte text a převádí vzorce do KaTeXu...');
   const [selectedSubject, setSelectedSubject] = useState<SubjectType | null>(null);
   const [topic, setTopic] = useState<string>('');
   const [isAiUncertain, setIsAiUncertain] = useState<boolean>(false);
-  const [previewImage, setPreviewImage] = useState<string>(
-    'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=500&auto=format&fit=crop&q=80'
-  );
+  const [previewImage, setPreviewImage] = useState<string>('');
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
   const [toast, setToast] = useState<Omit<ToastProps, 'onClose'> | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -114,7 +112,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote, userI
         return;
       }
 
-      setProcessingMessage('Model Dots3-Note čte text a převádí vzorce do KaTeXu...');
+      setProcessingMessage('Gemini AI čte text a převádí vzorce do KaTeXu...');
       const result = await extractNoteFromImage(compression.base64);
       recordRateLimitUsage('ocr_scan');
 
@@ -145,7 +143,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote, userI
       setStatus('error');
       setToast({
         type: 'error',
-        title: 'Chyba při digitalizaci zápisku',
+        title: 'Digitalizace se nezdařila',
         message: msg,
       });
     } finally {
@@ -180,7 +178,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote, userI
     }
 
     setStatus('processing');
-    setProcessingMessage('Zkouším digitalizaci znovu (Dots3-Note)...');
+    setProcessingMessage('Zkouším digitalizaci znovu (Gemini AI)...');
 
     try {
       const result = await extractNoteFromImage(previewImage);
@@ -231,34 +229,6 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote, userI
     setStatus('ready');
   };
 
-  const processDemo = (forceUncertain = false) => {
-    setPreviewImage('https://images.unsplash.com/photo-1509228468518-180dd4864904?w=500&auto=format&fit=crop&q=80');
-    setStatus('processing');
-    setProcessingMessage('Simuluji digitalizaci zápisku...');
-    playPopSound();
-
-    setTimeout(() => {
-      setStatus('ready');
-      if (forceUncertain) {
-        setIsAiUncertain(true);
-        setSelectedSubject(null);
-        setExtractedData(null);
-        setTopic('');
-      } else {
-        setIsAiUncertain(false);
-        setSelectedSubject('maths');
-        setTopic('Goniometrie');
-        setExtractedData({
-          title: 'Goniometrie a pravoúhlý trojúhelník',
-          topic: 'Goniometrie',
-          summary: 'Převedený zápisek z fotky sešitu do předmětu matematika.',
-          markdown: `# Goniometrie a pravoúhlý trojúhelník\n\n## 1. Základní vztahy v trojúhelníku\n- $\\sin(\\alpha) = \\frac{a}{c}$\n- $\\cos(\\alpha) = \\frac{b}{c}$\n- $\\text{tg}(\\alpha) = \\frac{a}{b}$\n\n## 2. Pythagorova věta\n$$a^2 + b^2 = c^2$$`,
-        });
-      }
-      playSuccessChime();
-    }, 600);
-  };
-
   const handleSave = async () => {
     if (!selectedSubject) return;
 
@@ -279,16 +249,15 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote, userI
       }
     }
 
+    const subjectName = AVAILABLE_CLASSES.find((c) => c.id === selectedSubject)?.name || selectedSubject;
+    const defaultTitle = topic.trim()
+      ? topic.trim()
+      : `Zápisek – ${subjectName}`;
+
     playSuccessChime();
     const newNote: NoteItem = {
       id: `note-${Date.now()}`,
-      title: extractedData?.title || (selectedSubject === 'maths'
-        ? 'Goniometrie a pravoúhlý trojúhelník'
-        : selectedSubject === 'czech'
-        ? 'Pravopis a větné členy'
-        : selectedSubject === 'history'
-        ? 'Historický přehled panovníků'
-        : 'Obecné zápisky z hodiny'),
+      title: extractedData?.title || defaultTitle,
       topic: topic.trim() || undefined,
       subject: selectedSubject,
       date: 'Právě teď',
@@ -297,9 +266,9 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote, userI
       readingTime: '2 min',
       accuracy: 98,
       status: 'new',
-      summary: extractedData?.summary || `Převedený zápisek z fotky sešitu do předmětu ${selectedSubject}.`,
+      summary: extractedData?.summary || `Převedený zápisek z fotky sešitu do předmětu ${subjectName}.`,
       tags: [selectedSubject, topic.trim() || 'Zápisky', 'Nový'],
-      markdown: extractedData?.markdown || `# Zápisky z hodiny\n\n- Digitalizovaný text ze sešitu.\n- Předmět: **${AVAILABLE_CLASSES.find(c => c.id === selectedSubject)?.name || selectedSubject}**`,
+      markdown: extractedData?.markdown || `# ${defaultTitle}\n\n- Digitalizovaný text ze sešitu.\n- Předmět: **${subjectName}**`,
     };
 
     // Automatically generate initial flashcards from formulas and concepts
@@ -346,7 +315,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote, userI
               )}
 
               {/* Main Fast Import Button */}
-              <label className="w-full duo-card p-6 flex flex-col items-center justify-center cursor-pointer hover:border-eagerGreen bg-[#f9fafb] group transition-all mb-3">
+              <label className="w-full duo-card p-6 flex flex-col items-center justify-center cursor-pointer hover:border-eagerGreen bg-[#f9fafb] group transition-all">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -365,24 +334,6 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote, userI
                   Klikni pro otevření fotoaparátu v mobilu
                 </span>
               </label>
-
-              {/* Demo test buttons */}
-              <div className="flex flex-col gap-1.5 w-full pt-1">
-                <button
-                  onClick={() => processDemo(false)}
-                  className="text-xs font-feather font-bold text-sparkBlue hover:underline py-1 cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  <Zap size={13} className="text-sparkBlue fill-sparkBlue" />
-                  <span>Zkusit demo s jasným předmětem</span>
-                </button>
-                <button
-                  onClick={() => processDemo(true)}
-                  className="text-xs font-feather font-bold text-duoGray-pencil hover:text-duoGray-charcoal hover:underline py-1 cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  <HelpCircle size={13} />
-                  <span>Zkusit demo s nejasným kontextem</span>
-                </button>
-              </div>
             </div>
           )}
 
@@ -393,7 +344,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote, userI
                 {processingMessage}
               </div>
               <span className="text-[11px] text-duoGray-pencil font-medium bg-gray-100 px-2.5 py-0.5 rounded-full mt-1 font-mono">
-                dots-studio/dots-3-note-preview:free
+                google/gemini-2.5-flash
               </span>
             </div>
           )}
