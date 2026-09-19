@@ -4,7 +4,7 @@ import { NoteItem, SubjectType } from '../types/notes';
 import { playPopSound, playSuccessChime } from '../utils/audio';
 import { SubjectIcon } from './SubjectIcon';
 import { Toast, ToastProps } from './Toast';
-import { extractNoteFromImage } from '../services/openrouter';
+import { extractNoteFromImage } from '../services/gemini';
 import { uploadNoteImage } from '../services/supabase';
 import { generateOfflineFlashcards } from '../services/flashcards';
 import { validateFileSize, compressAndPrepareImage } from '../utils/imageCompressor';
@@ -344,7 +344,7 @@ export const ScanModal: React.FC<ScanModalProps> = ({ onClose, onSaveNote, userI
                 {processingMessage}
               </div>
               <span className="text-[11px] text-duoGray-pencil font-medium bg-gray-100 px-2.5 py-0.5 rounded-full mt-1 font-mono">
-                google/gemini-2.5-flash
+                Google Gemini 2.5 Flash
               </span>
             </div>
           )}

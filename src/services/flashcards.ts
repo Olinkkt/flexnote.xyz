@@ -1,5 +1,7 @@
+import { GoogleGenAI, Type } from '@google/genai';
 import { FlashcardItem, NoteItem } from '../types/notes';
 import { checkRateLimit, recordRateLimitUsage } from './rateLimiter';
+import { getGeminiApiKey } from './gemini';
 
 /**
  * Robustly parses JSON from LLM response
@@ -61,116 +63,102 @@ export function generateOfflineFlashcards(note: NoteItem): FlashcardItem[] {
     }
   }
 
-  // 2. Extract bold key definitions from list items or paragraphs: e.g. "- **Pojem**: Vysvětlení" or "1. **Pojem**: ..."
-  const boldTermRegex = /^(?:[-*]|\d+\.)\s+\*\*([^*]+?)\*\*[:–—\-]\s*(.+)$/gm;
-  while ((match = boldTermRegex.exec(note.markdown)) !== null) {
+  // 2. Extract bold definitions (**Pojem**: definice or **Pojem** - definice)
+  const boldDefRegex = /\*\*([^*]+)\*\*\s*[:–-]\s*([^\n]+)/g;
+  while ((match = boldDefRegex.exec(note.markdown)) !== null) {
     const term = match[1].trim();
     const definition = match[2].trim();
-    if (term.length > 2 && definition.length > 3) {
+    if (term.length > 2 && definition.length > 5) {
       cards.push({
         id: `card-${Date.now()}-${cardIndex++}`,
-        front: `Co znamená nebo jaké pravidlo platí pro **${term}**?`,
-        back: `**${term}**:\n${definition}`,
+        front: `Co znamená pojem **${term}**?`,
+        back: `${definition}\n\n*Předmět: ${note.subject}*`,
         category: 'concept',
       });
     }
   }
 
-  // 3. Extract blockquotes: > **Důležité:** ... or > ...
-  const blockquoteRegex = /^>\s+(?:\*\*([^*]+?)\*\*[:\s]*)?(.+)$/gm;
-  while ((match = blockquoteRegex.exec(note.markdown)) !== null) {
-    const label = match[1]?.trim() || 'Důležité pravidlo';
+  // 3. Extract Blockquotes (> **Důležité:** ...)
+  const quoteRegex = />\s*\*\*([^*]+)\*\*:?\s*([^\n]+)/g;
+  while ((match = quoteRegex.exec(note.markdown)) !== null) {
+    const label = match[1].trim();
     const content = match[2].trim();
     if (content.length > 10) {
       cards.push({
         id: `card-${Date.now()}-${cardIndex++}`,
-        front: `Jaké je klíčové pravidlo / poučka pro **${note.title}**?`,
-        back: `> **${label}:**\n> ${content}`,
-        category: 'fact',
+        front: `Klíčové pravidlo / poučka (**${label}**):`,
+        back: `${content}`,
+        category: 'concept',
       });
     }
   }
 
-  // 4. Extract bullet points with dates or events (e.g. "- **1420**: Bitva na Vítkově")
-  const dateRegex = /^(?:[-*]|\d+\.)\s+\*\*(\d{1,4}[^*]*)\*\*[:–—\-]\s*(.+)$/gm;
-  while ((match = dateRegex.exec(note.markdown)) !== null) {
-    const dateStr = match[1].trim();
-    const event = match[2].trim();
-    if (!cards.some(c => c.front.includes(dateStr) || c.front.includes(event))) {
+  // 4. Extract bullet list key points (- **Pojem** ...)
+  const listPointRegex = /[-*]\s+\*\*([^*]+)\*\*\s*([^\n]*)/g;
+  while ((match = listPointRegex.exec(note.markdown)) !== null) {
+    const key = match[1].trim();
+    const detail = match[2].replace(/^[:–-]\s*/, '').trim();
+    if (key.length > 2 && detail.length > 8 && !cards.some((c) => c.front.includes(key))) {
       cards.push({
         id: `card-${Date.now()}-${cardIndex++}`,
-        front: `K jaké události se váže datum nebo rok **${dateStr}**?`,
-        back: `**${dateStr}**:\n${event}`,
+        front: `Co platí pro **${key}**?`,
+        back: `${detail}`,
         category: 'fact',
       });
     }
   }
 
-  // 5. If we still have fewer than 3 cards, generate cards from sections (H2 / H3)
-  if (cards.length < 3) {
-    const sectionRegex = /^(?:##|###)\s+(.+)$/gm;
-    let sectionMatch: RegExpExecArray | null;
-    while ((sectionMatch = sectionRegex.exec(note.markdown)) !== null) {
-      const sectionTitle = sectionMatch[1].trim();
-      const startIndex = sectionMatch.index + sectionMatch[0].length;
-      const nextHeadingIndex = note.markdown.indexOf('\n#', startIndex);
-      const sectionContent = (
-        nextHeadingIndex !== -1
-          ? note.markdown.substring(startIndex, nextHeadingIndex)
-          : note.markdown.substring(startIndex)
-      ).trim();
-
-      if (sectionContent.length > 15) {
-        cards.push({
-          id: `card-${Date.now()}-${cardIndex++}`,
-          front: `Co patří k tématu **${sectionTitle}**?`,
-          back: `**${sectionTitle}**:\n\n${sectionContent.substring(0, 260)}${sectionContent.length > 260 ? '...' : ''}`,
-          category: 'general',
-        });
-      }
-    }
-  }
-
-  // 6. If empty (very short note), create at least summary card
+  // Fallback if note had no structured KaTeX or bold markers: generate summary cards
   if (cards.length === 0) {
     cards.push({
-      id: `card-${Date.now()}-1`,
+      id: `card-${Date.now()}-summary-1`,
       front: `O čem pojednává zápisek **${note.title}**?`,
-      back: note.summary || note.markdown.substring(0, 180),
+      back: note.summary || 'Zápisek ze školního sešitu.',
       category: 'general',
     });
+
+    const lines = note.markdown
+      .split('\n')
+      .map((l) => l.replace(/^[#\-*>\s]+/, '').trim())
+      .filter((l) => l.length > 20 && !l.startsWith('$$'));
+
+    if (lines.length > 0) {
+      cards.push({
+        id: `card-${Date.now()}-summary-2`,
+        front: `Klíčový bod ze zápisku **${note.title}**:`,
+        back: lines[0],
+        category: 'concept',
+      });
+    }
   }
 
   return cards.slice(0, 10);
 }
 
 /**
- * Generate smart flashcards using OpenRouter AI model.
- * If generation fails or returns no cards, throws a clear descriptive error.
+ * Generates high-quality smart flashcards using Google Gemini API.
  */
 export async function generateFlashcardsForNote(note: NoteItem): Promise<FlashcardItem[]> {
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
     throw new Error('Pro vygenerování kartiček je vyžadováno připojení k internetu.');
   }
 
-  // Rate limit and spending cap check
+  // Rate limit check
   const rateCheck = checkRateLimit('generate_flashcards');
   if (!rateCheck.allowed) {
     throw new Error(rateCheck.reason || 'Dosažen limit pro generování kartiček.');
   }
 
-  const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
-  if (!apiKey || apiKey.trim() === '' || apiKey.includes('your_openrouter_api_key_here')) {
-    throw new Error('Chybí OpenRouter API klíč pro AI generování kartiček.');
-  }
+  const apiKey = getGeminiApiKey();
+  const ai = new GoogleGenAI({ apiKey });
 
-  const systemPrompt = `Jsi výukový asistent aplikace Flexnote specializovaný na tvorbu chytrých oboustranných kartiček (Flashcards) ze školních zápisků studentů.
+  const systemInstruction = `Jsi výukový asistent aplikace Flexnote specializovaný na tvorbu chytrých oboustranných kartiček (Flashcards) ze školních zápisků studentů.
 
 PRAVIDLA PRO TVORBU KARTIČEK:
 1. Vygeneruj 4 až 8 nejlepších a nejefektivnějších kartiček pro zkoušení z daného textu.
 2. FRONT (Přední strana):
    - Stručná a jasná otázka, výzva nebo název pojmu/vzorce (např. "Jak zní vzorec pro diskriminant?", "Co vyjadřuje sinová věta?", "Kdy proběhla bitva na Vítkově?").
-   - Pokud se ptáš na vzorec nebo proměnnou, můžeš použít $...$ nebo $$...$$.
+   - Pokud se ptáš na vzorec nebo proměnnou, použij $...$ nebo $$...$$.
 3. BACK (Zadní strana):
    - Přesná a srozumitelná odpověď.
    - VŽDY zformátuj matematické rovnice a výpočty do KaTeX syntaxe:
@@ -181,73 +169,71 @@ PRAVIDLA PRO TVORBU KARTIČEK:
    - "formula" (matematický/fyzikální vzorec)
    - "concept" (definice, pojem, pravopisné pravidlo)
    - "fact" (datum, událost, autor, dílo)
-   - "general" (obecná otázka)
-
-VÝSTUP MUSÍ BÝT VÝHRADNĚ VALIDNÍ JSON POLE BEZ DALŠÍHO TEXTU OKOLO:
-[
-  {
-    "front": "Jak zní vzorec pro sinovou větu?",
-    "back": "$$\\frac{a}{\\sin(\\alpha)} = \\frac{b}{\\sin(\\beta)} = \\frac{c}{\\sin(\\gamma)} = 2R$$\\n\\nPlatí pro libovolný obecný trojúhelník.",
-    "category": "formula"
-  }
-]`;
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 35000);
+   - "general" (obecná otázka)`;
 
   try {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      signal: controller.signal,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey.trim()}`,
-        'HTTP-Referer': 'https://flexnote.xyz',
-        'X-Title': 'Flexnote',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash-lite',
-        messages: [
-          {
-            role: 'system',
-            content: systemPrompt,
-          },
-          {
-            role: 'user',
-            content: `Vytvoř prosím výukové flashcards z tohoto zápisku:\n\nTéma: ${note.title}\nPředmět: ${note.subject}\n\n${note.markdown}`,
-          },
-        ],
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            {
+              text: `Vytvoř prosím výukové flashcards z tohoto zápisku:\n\nTéma: ${note.title}\nPředmět: ${note.subject}\n\n${note.markdown}`,
+            },
+          ],
+        },
+      ],
+      config: {
+        systemInstruction,
         temperature: 0.3,
-        max_tokens: 2000,
-      }),
+        responseMimeType: 'application/json',
+        responseJsonSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              front: {
+                type: Type.STRING,
+                description: 'Otázka na přední straně kartičky',
+              },
+              back: {
+                type: Type.STRING,
+                description: 'Odpověď na zadní straně kartičky (s KaTeXem)',
+              },
+              category: {
+                type: Type.STRING,
+                enum: ['formula', 'concept', 'fact', 'general'],
+              },
+              hint: {
+                type: Type.STRING,
+                description: 'Volitelná nápověda',
+              },
+            },
+            required: ['front', 'back', 'category'],
+          },
+        },
+      },
     });
 
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => '');
-      throw new Error(`Generování kartiček přes AI selhalo (kód ${response.status}): ${errorText || response.statusText}`);
-    }
-
-    const data = await response.json();
-    const rawContent = data.choices?.[0]?.message?.content;
-
-    if (!rawContent) {
+    const responseText = response.text;
+    if (!responseText) {
       throw new Error('AI nevrátila žádný obsah kartiček.');
     }
 
-    const cards = parseFlashcardsOutput(rawContent);
+    const cards = parseFlashcardsOutput(responseText);
     if (cards.length > 0) {
       recordRateLimitUsage('generate_flashcards');
       return cards;
     }
 
     throw new Error('Nepodařilo se zpracovat vygenerované kartičky z AI. Zkuste to prosím znovu.');
-  } catch (err: any) {
-    if (err?.name === 'AbortError') {
-      throw new Error('Generování kartiček vypršelo (časový limit 35 s). AI model neodpověděl včas.');
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message.includes('API_KEY_MISSING')) {
+      throw err;
     }
-    throw err;
-  } finally {
-    clearTimeout(timeoutId);
+    throw new Error(`Generování kartiček selhalo: ${message}`);
   }
 }
 
@@ -263,85 +249,89 @@ export async function generateFlashcardsForTopic(
     throw new Error('Pro vygenerování kartiček je vyžadováno připojení k internetu.');
   }
 
-  // Rate limit and spending cap check
+  // Rate limit check
   const rateCheck = checkRateLimit('generate_flashcards');
   if (!rateCheck.allowed) {
     throw new Error(rateCheck.reason || 'Dosažen limit pro generování kartiček.');
   }
 
-  const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
-  if (!apiKey || apiKey.trim() === '' || apiKey.includes('your_openrouter_api_key_here')) {
-    throw new Error('Chybí OpenRouter API klíč pro AI generování kartiček.');
-  }
+  const apiKey = getGeminiApiKey();
+  const ai = new GoogleGenAI({ apiKey });
 
   const combinedContent = notes
     .map((n, i) => `### Strana ${i + 1}: ${n.title}\n${n.markdown}`)
     .join('\n\n---\n\n');
 
-  const systemPrompt = `Jsi výukový asistent aplikace Flexnote specializovaný na tvorbu chytrých oboustranných kartiček (Flashcards) ze školních zápisků studentů.
+  const systemInstruction = `Jsi výukový asistent aplikace Flexnote specializovaný na tvorbu chytrých oboustranných kartiček (Flashcards) ze školních zápisků studentů.
 Tvým úkolem je vytvořit komplexní balíček kartiček pokrývající celé téma „${topicName}“, které se skládá z ${notes.length} stránek zápisků.
 
 PRAVIDLA PRO TVORBU KARTIČEK:
 1. Vygeneruj 6 až 10 nejlepších kartiček pokrývajících celou kapitolu.
 2. FRONT: stručná a jasná otázka nebo pojem.
-3. BACK: přesná odpověď, matematické výrazy VŽDY v KaTeXu ($...$ nebo $$...$$), klíčové pojmy tučně (**bold**).
-4. Vrať VÝHRADNĚ validní JSON pole bez dalšího textu okolo.`;
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 35000);
+3. BACK: přesná odpověď, matematické výrazy VŽDY v KaTeXu ($...$ nebo $$...$$), klíčové pojmy tučně (**bold**).`;
 
   try {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      signal: controller.signal,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey.trim()}`,
-        'HTTP-Referer': 'https://flexnote.xyz',
-        'X-Title': 'Flexnote',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash-lite',
-        messages: [
-          {
-            role: 'system',
-            content: systemPrompt,
-          },
-          {
-            role: 'user',
-            content: `Vytvoř souhrnné flashcards z tohoto tématu:\n\nTéma: ${topicName}\nPředmět: ${subject}\n\n${combinedContent}`,
-          },
-        ],
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            {
+              text: `Vytvoř souhrnné flashcards z tohoto tématu:\n\nTéma: ${topicName}\nPředmět: ${subject}\n\n${combinedContent}`,
+            },
+          ],
+        },
+      ],
+      config: {
+        systemInstruction,
         temperature: 0.3,
-        max_tokens: 2000,
-      }),
+        responseMimeType: 'application/json',
+        responseJsonSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              front: {
+                type: Type.STRING,
+                description: 'Otázka na přední straně kartičky',
+              },
+              back: {
+                type: Type.STRING,
+                description: 'Odpověď na zadní straně kartičky (s KaTeXem)',
+              },
+              category: {
+                type: Type.STRING,
+                enum: ['formula', 'concept', 'fact', 'general'],
+              },
+              hint: {
+                type: Type.STRING,
+                description: 'Volitelná nápověda',
+              },
+            },
+            required: ['front', 'back', 'category'],
+          },
+        },
+      },
     });
 
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => '');
-      throw new Error(`Generování kartiček přes AI selhalo (kód ${response.status}): ${errorText || response.statusText}`);
-    }
-
-    const data = await response.json();
-    const rawContent = data.choices?.[0]?.message?.content;
-
-    if (!rawContent) {
+    const responseText = response.text;
+    if (!responseText) {
       throw new Error('AI nevrátila žádný obsah kartiček.');
     }
 
-    const cards = parseFlashcardsOutput(rawContent);
+    const cards = parseFlashcardsOutput(responseText);
     if (cards.length > 0) {
       recordRateLimitUsage('generate_flashcards');
       return cards;
     }
 
     throw new Error('Nepodařilo se zpracovat vygenerované kartičky z AI. Zkuste to prosím znovu.');
-  } catch (err: any) {
-    if (err?.name === 'AbortError') {
-      throw new Error('Generování kartiček vypršelo (časový limit 35 s). AI model neodpověděl včas.');
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message.includes('API_KEY_MISSING')) {
+      throw err;
     }
-    throw err;
-  } finally {
-    clearTimeout(timeoutId);
+    throw new Error(`Generování kartiček selhalo: ${message}`);
   }
 }
