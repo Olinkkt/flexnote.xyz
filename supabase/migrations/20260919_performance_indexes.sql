@@ -1,5 +1,5 @@
 -- Migration: 20260919_performance_indexes.sql
--- Description: Production database indexes for Flexnote (flexnote.xyz)
+-- Description: Production database indexes for Flexnote (flexnote.oliverseidl.dev)
 -- Optimizes note fetching, subject filtering, and leaderboard rankings.
 
 -- 1. Index on notes for user's notes ordered by created_at DESC (used on every app boot & notes list)

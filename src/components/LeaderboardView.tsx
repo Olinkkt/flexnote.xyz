@@ -215,7 +215,7 @@ export const LeaderboardView: React.FC<LeaderboardViewProps> = ({
   const generateFlexText = () => {
     const rankText = currentUserEntry ? `${currentUserEntry.rank}. místo` : 'v TOP lize';
     const weeklyTime = formatStudyDuration(gamification.weeklyStudySeconds);
-    return `Moje statistiky na Flexnote (flexnote.xyz):
+    return `Moje statistiky na Flexnote (flexnote.oliverseidl.dev):
 • Série: ${gamification.streakDays} dní v řadě
 • Čas studia tento týden: ${weeklyTime}
 • Získáno drahokamů: ${gamification.weeklyDiamonds}

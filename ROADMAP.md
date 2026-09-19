@@ -1,6 +1,6 @@
-# 🗺️ Flexnote (flexnote.xyz) — Plán rozvoje projektu
+# 🗺️ Flexnote (flexnote.oliverseidl.dev) — Plán rozvoje projektu
 
-Tento dokument definuje vizi a jednotlivé vývojové milníky aplikace **Flexnote (flexnote.xyz)** od současné verze v1 až po pokročilou gamifikaci v5.
+Tento dokument definuje vizi a jednotlivé vývojové milníky aplikace **Flexnote (flexnote.oliverseidl.dev)** od současné verze v1 až po pokročilou gamifikaci v5.
 
 ---
 

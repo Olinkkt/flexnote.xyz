@@ -1,4 +1,4 @@
-﻿# 📓 Flexnote (`flexnote.xyz`)
+# 📓 Flexnote (`flexnote.oliverseidl.dev`)
 
 > Moderní studijní platforma pro studenty, která převádí fotky sešitů do přehledného Markdownu s KaTeX vzorci, kartičkami a interaktivními kvízy.
 
@@ -94,7 +94,7 @@ npm run preview
 
 - **Žádné úniky API klíče:** Proměnná pro Gemini API se jmenuje **`GEMINI_API_KEY`** (bez prefixu `VITE_`). Na Vercelu je uložena jako chráněný **Secret** v Environment Variables a nikdy se nedostane do klientského bundle v prohlížeči.
 - **Serverless Endpoint:** Klientská aplikace komunikuje výhradně přes relativní URL `/api/gemini`, kde běží node runtime s `maxDuration: 60s`.
-- **CORS & Omezení:** V produkci doporučujeme v Google Cloud Console / AI Studiu omezit API klíč pouze na domény `flexnote.oliverseidl.dev` a `flexnote.xyz`.
+- **CORS & Omezení:** V produkci doporučujeme v Google Cloud Console / AI Studiu omezit API klíč pouze na doménu `flexnote.oliverseidl.dev`.
 
 ---
 

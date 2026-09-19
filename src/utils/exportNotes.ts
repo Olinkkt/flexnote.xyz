@@ -132,7 +132,7 @@ export function generateAllNotesMarkdown(
   }
 
   // Footer
-  md += `*Vygenerováno aplikací [Flexnote](https://flexnote.xyz) — Digitální sešit s AI a KaTeX vzorci.*\n`;
+  md += `*Vygenerováno aplikací [Flexnote](https://flexnote.oliverseidl.dev) — Digitální sešit s AI a KaTeX vzorci.*\n`;
 
   return md;
 }
@@ -181,7 +181,7 @@ export function createMailtoExportUrl(
   const body = encodeURIComponent(
     `Ahoj ${userName},\n\nzde je tvůj export studijních zápisků z Flexnote (${notesCount} zápisků):\n\n` +
     preview +
-    `\n\n---\nVygenerováno v aplikaci Flexnote (https://flexnote.xyz)`
+    `\n\n---\nVygenerováno v aplikaci Flexnote (https://flexnote.oliverseidl.dev)`
   );
 
   return `mailto:${recipientEmail}?subject=${subject}&body=${body}`;
