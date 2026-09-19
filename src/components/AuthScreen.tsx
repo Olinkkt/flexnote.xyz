@@ -1,25 +1,25 @@
 import React, { useState } from 'react';
-import { Mail, Lock, User, Loader2, ArrowRight, BookOpen, Sparkles, Camera, Cloud, CheckCircle2 } from 'lucide-react';
+import { Mail, Lock, User, Loader2, ArrowRight, BookOpen, Sparkles, CheckCircle2 } from 'lucide-react';
 import { playPopSound, playSuccessChime } from '../utils/audio';
 import { signInWithEmail, signUpWithEmail, signInWithGoogle } from '../services/supabase';
 
 interface AuthScreenProps {
   onSuccess?: () => void;
   onRequiresConfirmation?: (email: string) => void;
-  onContinueOffline?: () => void;
+  initialError?: string | null;
 }
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({
   onSuccess,
   onRequiresConfirmation,
-  onContinueOffline,
+  initialError,
 }) => {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(initialError || null);
   const [signupSuccess, setSignupSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -102,44 +102,9 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
         <h1 className="font-feather font-black text-2xl text-duoGray-charcoal tracking-tight">
           Flexnote
         </h1>
-        <p className="text-xs text-duoGray-pencil font-bold max-w-[280px] mt-1 leading-relaxed">
-          Chytré zápisky ze sešitů v cloudu s AI a KaTeX matematikou
+        <p className="text-xs text-duoGray-pencil font-bold max-w-[290px] mt-1 mb-4 leading-relaxed">
+          Přeměň zápisky ze sešitu v perfektní studijní materiály a zvládni zkoušky bez stresu
         </p>
-
-        {/* 3 Value Proposition Micro-Cards */}
-        <div className="grid grid-cols-3 gap-2 w-full mt-4 mb-3">
-          <div className="duo-card p-2 bg-[#f7f9fa] border-duoGray-border flex flex-col items-center text-center">
-            <Camera size={16} className="text-sparkBlue stroke-[2.5] mb-1" />
-            <span className="text-[10px] font-feather font-black text-duoGray-charcoal leading-tight">
-              AI OCR
-            </span>
-            <span className="text-[8.5px] font-bold text-duoGray-pencil leading-none mt-0.5">
-              Ze sešitu
-            </span>
-          </div>
-
-          <div className="duo-card p-2 bg-[#f7f9fa] border-duoGray-border flex flex-col items-center text-center">
-            <span className="font-serif italic font-bold text-xs text-eagerGreen leading-none mb-1">
-              fx
-            </span>
-            <span className="text-[10px] font-feather font-black text-duoGray-charcoal leading-tight">
-              KaTeX
-            </span>
-            <span className="text-[8.5px] font-bold text-duoGray-pencil leading-none mt-0.5">
-              Matematika
-            </span>
-          </div>
-
-          <div className="duo-card p-2 bg-[#f7f9fa] border-duoGray-border flex flex-col items-center text-center">
-            <Cloud size={16} className="text-macawBlue stroke-[2.5] mb-1" />
-            <span className="text-[10px] font-feather font-black text-duoGray-charcoal leading-tight">
-              Cloud
-            </span>
-            <span className="text-[8.5px] font-bold text-duoGray-pencil leading-none mt-0.5">
-              Záloha
-            </span>
-          </div>
-        </div>
       </div>
 
       {/* Center Auth Card */}
@@ -298,29 +263,32 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
               </svg>
               <span>Pokračovat přes Google</span>
             </button>
-
-            {/* Offline continuation / Guest access for students */}
-            {onContinueOffline && (
-              <button
-                type="button"
-                onClick={() => {
-                  playPopSound();
-                  onContinueOffline();
-                }}
-                className="w-full pt-2 pb-1 text-xs font-feather font-extrabold text-duoGray-pencil hover:text-duoGray-charcoal hover:underline transition cursor-pointer text-center"
-              >
-                {typeof navigator !== 'undefined' && !navigator.onLine
-                  ? '📡 Jsi offline — Otevřít místní sešit'
-                  : 'Používat offline bez přihlášení (Místní sešit)'}
-              </button>
-            )}
           </form>
         )}
       </div>
 
       {/* Footer Info */}
-      <div className="text-center pt-2 text-[10px] text-duoGray-faded font-bold">
-        Bezpečné přihlášení s cloudem Supabase
+      <div className="text-center pt-2 text-[10px] text-duoGray-faded font-bold flex flex-col items-center gap-1">
+        <div>Bezpečné přihlášení s cloudem Supabase</div>
+        <div className="flex items-center justify-center gap-2 font-semibold">
+          <a
+            href="/terms.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:underline hover:text-duoGray-pencil transition"
+          >
+            Podmínky služby
+          </a>
+          <span>•</span>
+          <a
+            href="/privacy.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:underline hover:text-duoGray-pencil transition"
+          >
+            Ochrana soukromí
+          </a>
+        </div>
       </div>
     </div>
   );

@@ -323,6 +323,15 @@ export async function signOutUser() {
 }
 
 /**
+ * Permanently delete current user account and all associated data
+ */
+export async function deleteUserAccount() {
+  const { error } = await (supabase.rpc as any)('delete_user_account');
+  if (error) throw error;
+  await signOutUser().catch(() => {});
+}
+
+/**
  * Fetch profile for a user ID
  */
 export async function fetchUserProfile(userId: string): Promise<UserProfile | null> {

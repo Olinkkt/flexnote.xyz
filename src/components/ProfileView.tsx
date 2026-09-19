@@ -23,6 +23,7 @@ import {
   RefreshCw,
   Clock,
   MessageSquare,
+  Trash2,
 } from 'lucide-react';
 import { UserProfile, signOutUser, updateUserProfile, checkUsernameAvailability } from '../services/supabase';
 import { GamificationState } from '../types/notes';
@@ -36,6 +37,7 @@ interface ProfileViewProps {
   totalNotes: number;
   gamification?: GamificationState;
   onSignOut: () => void;
+  onDeleteAccount?: () => Promise<void>;
   onUpdateProfile?: (updated: UserProfile) => void;
   onOpenExport?: () => void;
   isOnline?: boolean;
@@ -67,6 +69,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   totalNotes,
   gamification,
   onSignOut,
+  onDeleteAccount,
   onUpdateProfile,
   onOpenExport,
   isOnline = true,
@@ -75,6 +78,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onSyncNow,
 }) => {
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [showPwaGuide, setShowPwaGuide] = useState(false);
   const [fullName, setFullName] = useState(profile?.full_name || '');
   const [username, setUsername] = useState(profile?.username || '');
@@ -459,6 +465,43 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         <span>Odhlásit se</span>
       </button>
 
+      {/* Delete Account Discreet Link */}
+      {onDeleteAccount && (
+        <div className="text-center pt-1">
+          <button
+            type="button"
+            onClick={() => {
+              playPopSound();
+              setDeleteModalOpen(true);
+            }}
+            className="text-[11px] font-bold text-duoGray-pencil hover:text-[#ff4b4b] transition cursor-pointer underline hover:no-underline"
+          >
+            Trvale smazat účet a data
+          </button>
+        </div>
+      )}
+
+      {/* Subtle legal footer */}
+      <div className="text-center py-2 text-[10.5px] text-duoGray-pencil font-semibold flex items-center justify-center gap-2.5">
+        <a
+          href="/terms.html"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:underline hover:text-duoGray-charcoal transition"
+        >
+          Podmínky služby
+        </a>
+        <span>•</span>
+        <a
+          href="/privacy.html"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:underline hover:text-duoGray-charcoal transition"
+        >
+          Zásady ochrany soukromí
+        </a>
+      </div>
+
       {/* Edit Profile Modal */}
       {editModalOpen && (
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 backdrop-blur-xs animate-in fade-in duration-100">
@@ -664,6 +707,63 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 )}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Account Confirmation Modal */}
+      {deleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs animate-in fade-in duration-100 p-4">
+          <div className="w-full max-w-sm bg-white rounded-3xl flex flex-col overflow-hidden shadow-2xl border-2 border-duoGray-border p-5 animate-in zoom-in-95 duration-150">
+            <div className="w-12 h-12 rounded-2xl bg-red-100 text-[#ff4b4b] flex items-center justify-center mx-auto mb-3">
+              <Trash2 size={24} className="stroke-[2.5]" />
+            </div>
+
+            <h3 className="font-feather font-black text-lg text-duoGray-charcoal text-center mb-1">
+              Trvale smazat účet?
+            </h3>
+            <p className="text-xs text-duoGray-pencil font-bold text-center mb-4 leading-relaxed">
+              Tato akce je nevratná. Všechny tvé zdigitalizované sešity, vzorce, kartičky i studijní statistiky budou trvale a nenávratně odstraněny z cloudu.
+            </p>
+
+            {deleteError && (
+              <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-[#d93838] text-xs font-bold leading-tight mb-3">
+                {deleteError}
+              </div>
+            )}
+
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={async () => {
+                  setDeleting(true);
+                  setDeleteError(null);
+                  try {
+                    await onDeleteAccount?.();
+                  } catch (err: unknown) {
+                    const msg = err instanceof Error ? err.message : String(err);
+                    setDeleteError(msg || 'Nepodařilo se smazat účet. Zkus to prosím znovu.');
+                    setDeleting(false);
+                  }
+                }}
+                className="w-full py-2.5 px-4 rounded-xl bg-[#ff4b4b] hover:bg-[#e03a3a] text-white text-xs font-feather font-black uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-xs disabled:opacity-50 transition"
+              >
+                {deleting ? <Loader2 size={16} className="animate-spin" /> : 'Ano, trvale smazat účet'}
+              </button>
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={() => {
+                  playPopSound();
+                  setDeleteModalOpen(false);
+                  setDeleteError(null);
+                }}
+                className="w-full py-2.5 px-4 rounded-xl border-2 border-duoGray-border text-duoGray-charcoal hover:bg-gray-100 text-xs font-feather font-black uppercase tracking-wider cursor-pointer transition"
+              >
+                Zrušit
+              </button>
+            </div>
           </div>
         </div>
       )}

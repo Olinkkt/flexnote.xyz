@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Podmínky služby (Terms of Service) | Flexnote</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --primary: #58cc02;
+      --primary-dark: #46a302;
+      --charcoal: #3c3c3c;
+      --pencil: #777777;
+      --bg: #f7f9fa;
+      --card-bg: #ffffff;
+      --border: #e5e7eb;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--charcoal);
+      line-height: 1.6;
+      padding: 24px 16px;
+    }
+    .container {
+      max-width: 780px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      border: 2px solid var(--border);
+      border-radius: 24px;
+      padding: 36px 32px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 20px;
+      margin-bottom: 28px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--charcoal);
+    }
+    .brand-logo {
+      width: 44px;
+      height: 44px;
+      background: var(--primary);
+      border-bottom: 4px solid var(--primary-dark);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 900;
+      font-size: 22px;
+    }
+    .brand-name {
+      font-size: 24px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+    }
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      background: #f1f5f9;
+      color: var(--charcoal);
+      text-decoration: none;
+      font-weight: 800;
+      font-size: 13px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+    .back-btn:hover {
+      background: #e2e8f0;
+    }
+    h1 {
+      font-size: 26px;
+      font-weight: 900;
+      color: var(--charcoal);
+      margin-bottom: 8px;
+    }
+    .updated {
+      font-size: 13px;
+      color: var(--pencil);
+      font-weight: 700;
+      margin-bottom: 28px;
+    }
+    h2 {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--charcoal);
+      margin-top: 28px;
+      margin-bottom: 12px;
+    }
+    p, li {
+      font-size: 15px;
+      color: #4b5563;
+      margin-bottom: 12px;
+    }
+    ul {
+      padding-left: 24px;
+      margin-bottom: 16px;
+    }
+    li {
+      margin-bottom: 6px;
+    }
+    .footer-note {
+      margin-top: 36px;
+      padding-top: 20px;
+      border-top: 2px solid var(--border);
+      font-size: 13px;
+      color: var(--pencil);
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .footer-note a {
+      color: var(--charcoal);
+      font-weight: 700;
+      text-decoration: underline;
+    }
+    @media (max-width: 600px) {
+      .container {
+        padding: 24px 18px;
+        border-radius: 20px;
+      }
+      .header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <a href="/" class="brand">
+        <div class="brand-logo">📖</div>
+        <div class="brand-name">Flexnote</div>
+      </a>
+      <a href="/" class="back-btn">← Zpět do aplikace</a>
+    </header>
+
+    <main>
+      <h1>Podmínky používání služby (Terms of Service)</h1>
+      <div class="updated">Poslední aktualizace: 20. září 2026</div>
+
+      <p>
+        Tyto Podmínky používání služby (dále jen „Podmínky“) upravují pravidla pro přístup a používání vzdělávací webové aplikace <strong>Flexnote</strong>, dostupné na internetové adrese <a href="https://flexnote.oliverseidl.dev">flexnote.oliverseidl.dev</a>.
+      </p>
+
+      <h2>1. Popis služby</h2>
+      <p>
+        Flexnote je digitální studijní nástroj navržený pro studenty a žáky. Umožňuje převod fotografií školních sešitů do přehledného formátu Markdown s podporou matematických vzorců KaTeX, tvorbu cvičných kartiček (flashcards), procvičování a sledování studijního pokroku.
+      </p>
+
+      <h2>2. Uživatelské účty a registrace</h2>
+      <ul>
+        <li>K plnohodnotnému využívání služby a synchronizaci zápisků je vyžadována registrace prostřednictvím e-mailu nebo účtu Google (OAuth 2.0).</li>
+        <li>Uživatel je povinen chránit své přihlašovací údaje a odpovídá za veškeré aktivity prováděné v rámci svého účtu.</li>
+        <li>Uživatel se zavazuje uvádět pravdivé a přesné informace.</li>
+      </ul>
+
+      <h2>3. Vlastnictví obsahu a autorská práva</h2>
+      <ul>
+        <li><strong>Vlastnictví zápisků:</strong> Veškerý obsah, který nahrajete (fotografie sešitů, vlastní zápisky, studijní materiály), zůstává plně ve vašem vlastnictví. Flexnote si k vašim materiálům nenárokuje žádná autorská práva.</li>
+        <li><strong>Oprávnění k provozu:</strong> Nahráním obsahu udělujete službě Flexnote pouze technické oprávnění obsah zpracovat, uložit v cloudu a zobrazit vám na vašich zařízeních.</li>
+        <li><strong>Odpovědnost za obsah:</strong> Uživatel odpovídá za to, že nahráním materiálů neporušuje autorská práva třetích osob ani platné právní předpisy.</li>
+      </ul>
+
+      <h2>4. Pravidla přijatelného chování</h2>
+      <p>Při používání aplikace Flexnote je zakázáno:</p>
+      <ul>
+        <li>Nahrávat obsah, který je nezákonný, urážlivý, vulgární nebo porušující soukromí druhých.</li>
+        <li>Pokoušet se o neoprávněný přístup k cizím účtům, serverům nebo databázím.</li>
+        <li>Automatizovaně přetěžovat servery nebo AI infrastrukturu nepřiměřeným počtem požadavků (spamování, botting).</li>
+      </ul>
+
+      <h2>5. Dostupnost služby a vyloučení záruk</h2>
+      <p>
+        Aplikace Flexnote je v současné době poskytována zdarma. Ačkoliv vynakládáme maximální úsilí na zajištění 100% dostupnosti, integrity dat a offline funkčnosti, služba je poskytována <em>„tak jak je“ (as is)</em>. Doporučujeme důležité studijní materiály pravidelně zálohovat nebo exportovat.
+      </p>
+
+      <h2>6. Zrušení a smazání účtu</h2>
+      <p>
+        Svůj účet a veškerá svá data můžete kdykoliv trvale smazat přímo v aplikaci v záložce <strong>Profil ➔ Trvale smazat účet</strong>. Po potvrzení budou všechny vaše zápisky a profilové údaje nevratně odstraněny ze serverů. O smazání účtu můžete také požádat zasláním e-mailu na <a href="mailto:oliver@oliverseidl.dev">oliver@oliverseidl.dev</a>.
+      </p>
+
+      <h2>7. Změny podmínek</h2>
+      <p>
+        Vyhrazujeme si právo tyto Podmínky v přiměřeném rozsahu upravit. Pokračováním v používání služby po nabytí účinnosti změn vyjadřujete svůj souhlas s novým zněním.
+      </p>
+
+      <h2>8. Kontaktní informace</h2>
+      <p>
+        Provozovatel: Oliver Seidl<br />
+        E-mail: <a href="mailto:oliver@oliverseidl.dev">oliver@oliverseidl.dev</a><br />
+        Web: <a href="https://flexnote.oliverseidl.dev">flexnote.oliverseidl.dev</a>
+      </p>
+    </main>
+
+    <footer class="footer-note">
+      <div>© 2026 Flexnote (flexnote.oliverseidl.dev). Všechna práva vyhrazena.</div>
+      <div>
+        <a href="/privacy.html">Zásady ochrany osobních údajů (Privacy Policy)</a>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>

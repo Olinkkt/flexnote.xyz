@@ -21,6 +21,7 @@ import {
   fetchUserProfile,
   checkCurrentUserVerification,
   signOutUser,
+  deleteUserAccount,
   UserProfile,
   User,
 } from './services/supabase';
@@ -84,12 +85,21 @@ export const App: React.FC = () => {
     }
   });
 
-  const [isGuestMode, setIsGuestMode] = useState<boolean>(() => {
+  const [authError, setAuthError] = useState<string | null>(() => {
     try {
-      return localStorage.getItem('flexnote_guest_mode') === 'true';
-    } catch {
-      return false;
-    }
+      const hash = window.location.hash;
+      const search = window.location.search;
+      if (hash.includes('error=') || search.includes('error=')) {
+        const raw = hash.includes('error=') ? hash.replace(/^#/, '') : search.replace(/^\?/, '');
+        const params = new URLSearchParams(raw);
+        const desc = params.get('error_description') || params.get('error');
+        if (desc) {
+          window.history.replaceState({}, document.title, window.location.pathname);
+          return decodeURIComponent(desc.replace(/\+/g, ' '));
+        }
+      }
+    } catch {}
+    return null;
   });
 
   const {
@@ -335,7 +345,20 @@ export const App: React.FC = () => {
     setUser(null);
     setUserProfile(null);
     setUnconfirmedEmail(null);
-    setIsGuestMode(false);
+    try {
+      localStorage.removeItem('flexnote_unconfirmed_email');
+      localStorage.removeItem('flexnote_guest_mode');
+    } catch {}
+    setActiveTab('notes');
+  };
+
+  // Permanently delete user account and clean states
+  const handleDeleteAccount = async () => {
+    await deleteUserAccount();
+    setUser(null);
+    setUserProfile(null);
+    setNotes([]);
+    setUnconfirmedEmail(null);
     try {
       localStorage.removeItem('flexnote_unconfirmed_email');
       localStorage.removeItem('flexnote_guest_mode');
@@ -373,16 +396,11 @@ export const App: React.FC = () => {
           onCheckVerified={handleCheckVerified}
           onSignOut={handleSignOut}
         />
-      ) : !user && !isGuestMode ? (
+      ) : !user ? (
         <AuthScreen
-          onSuccess={() => {}}
+          onSuccess={() => setAuthError(null)}
           onRequiresConfirmation={handleRequiresConfirmation}
-          onContinueOffline={() => {
-            try {
-              localStorage.setItem('flexnote_guest_mode', 'true');
-            } catch {}
-            setIsGuestMode(true);
-          }}
+          initialError={authError}
         />
       ) : (
         <>
@@ -457,6 +475,7 @@ export const App: React.FC = () => {
                 totalNotes={notes.length}
                 gamification={gamification}
                 onSignOut={handleSignOut}
+                onDeleteAccount={handleDeleteAccount}
                 onUpdateProfile={(updated) => setUserProfile(updated)}
                 onOpenExport={() => setExportModalOpen(true)}
                 isOnline={isOnline}
