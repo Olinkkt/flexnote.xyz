@@ -4,22 +4,14 @@ export const config = {
   maxDuration: 60,
 };
 
-async function callOpenAiCompatible(apiKey: string, body: Record<string, any>) {
-  // Determine if it's an OpenRouter key or direct OpenAI key
-  const isOpenRouter = apiKey.startsWith('sk-or-');
-  const endpoint = isOpenRouter
-    ? 'https://openrouter.ai/api/v1/chat/completions'
-    : 'https://api.openai.com/v1/chat/completions';
+async function callOpenAi(apiKey: string, body: Record<string, any>) {
+  const baseUrl = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '');
+  const endpoint = `${baseUrl}/chat/completions`;
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${apiKey.trim()}`,
   };
-
-  if (isOpenRouter) {
-    headers['HTTP-Referer'] = 'https://flexnote.oliverseidl.dev';
-    headers['X-Title'] = 'Flexnote';
-  }
 
   const response = await fetch(endpoint, {
     method: 'POST',
@@ -29,7 +21,7 @@ async function callOpenAiCompatible(apiKey: string, body: Record<string, any>) {
 
   if (!response.ok) {
     const errorText = await response.text().catch(() => '');
-    throw new Error(`AI model request failed (${response.status}): ${errorText || response.statusText}`);
+    throw new Error(`OpenAI API request failed (${response.status}): ${errorText || response.statusText}`);
   }
 
   const data = await response.json();
@@ -54,10 +46,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Support whichever env variable the user has configured
   const apiKey =
-    process.env.GEMINI_API_KEY ||
     process.env.OPENAI_API_KEY ||
+    process.env.GEMINI_API_KEY ||
     process.env.OPENROUTER_API_KEY ||
     process.env.VITE_GEMINI_API_KEY ||
+    process.env.VITE_OPENAI_API_KEY ||
     process.env.VITE_OPENROUTER_API_KEY;
 
   if (!apiKey || apiKey.trim() === '') {
@@ -99,11 +92,8 @@ VÝSTUP MUSÍ BÝT VÝHRADNĚ VALIDNÍ JSON BEZ TEXTU OKOLO:
   "markdown": "Kompletní strukturovaný zápisek v Markdownu s KaTeX vzorci"
 }`;
 
-      const isOpenRouter = apiKey.startsWith('sk-or-');
-      const model = isOpenRouter ? 'openai/gpt-5-mini' : 'gpt-5-mini';
-
-      const result = await callOpenAiCompatible(apiKey, {
-        model,
+      const result = await callOpenAi(apiKey, {
+        model: 'gpt-5-mini',
         messages: [
           { role: 'system', content: systemInstruction },
           {
@@ -123,9 +113,7 @@ VÝSTUP MUSÍ BÝT VÝHRADNĚ VALIDNÍ JSON BEZ TEXTU OKOLO:
           },
         ],
         reasoning_effort: 'low',
-        reasoning: { effort: 'low' },
-        temperature: 0.2,
-        max_tokens: 3000,
+        max_completion_tokens: 3500,
       });
 
       return res.status(200).json({ result });
@@ -150,11 +138,8 @@ VÝSTUP MUSÍ BÝT VÝHRADNĚ VALIDNÍ JSON POLE:
   }
 ]`;
 
-      const isOpenRouter = apiKey.startsWith('sk-or-');
-      const model = isOpenRouter ? 'openai/gpt-5.6-luna' : 'gpt-5.6-luna';
-
-      const result = await callOpenAiCompatible(apiKey, {
-        model,
+      const result = await callOpenAi(apiKey, {
+        model: 'gpt-5.6-luna',
         messages: [
           { role: 'system', content: systemInstruction },
           {
@@ -163,7 +148,7 @@ VÝSTUP MUSÍ BÝT VÝHRADNĚ VALIDNÍ JSON POLE:
           },
         ],
         temperature: 0.3,
-        max_tokens: 2500,
+        max_completion_tokens: 2500,
       });
 
       return res.status(200).json({ result });
@@ -184,11 +169,8 @@ DŮLEŽITÉ:
 - Bezchybná spisovná čeština.
 - Vrať VÝHRADNĚ validní JSON pole.`;
 
-      const isOpenRouter = apiKey.startsWith('sk-or-');
-      const model = isOpenRouter ? 'openai/gpt-5.6-luna' : 'gpt-5.6-luna';
-
-      const result = await callOpenAiCompatible(apiKey, {
-        model,
+      const result = await callOpenAi(apiKey, {
+        model: 'gpt-5.6-luna',
         messages: [
           { role: 'system', content: systemInstruction },
           {
@@ -197,7 +179,7 @@ DŮLEŽITÉ:
           },
         ],
         temperature: 0.3,
-        max_tokens: 2500,
+        max_completion_tokens: 2500,
       });
 
       return res.status(200).json({ result });

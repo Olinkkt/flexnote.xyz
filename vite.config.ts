@@ -1,21 +1,14 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
-async function callOpenAiCompatible(apiKey: string, body: Record<string, any>) {
-  const isOpenRouter = apiKey.startsWith('sk-or-');
-  const endpoint = isOpenRouter
-    ? 'https://openrouter.ai/api/v1/chat/completions'
-    : 'https://api.openai.com/v1/chat/completions';
+async function callOpenAi(apiKey: string, body: Record<string, any>) {
+  const baseUrl = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '');
+  const endpoint = `${baseUrl}/chat/completions`;
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${apiKey.trim()}`,
   };
-
-  if (isOpenRouter) {
-    headers['HTTP-Referer'] = 'https://flexnote.oliverseidl.dev';
-    headers['X-Title'] = 'Flexnote';
-  }
 
   const response = await fetch(endpoint, {
     method: 'POST',
@@ -25,7 +18,7 @@ async function callOpenAiCompatible(apiKey: string, body: Record<string, any>) {
 
   if (!response.ok) {
     const errorText = await response.text().catch(() => '');
-    throw new Error(`AI model request failed (${response.status}): ${errorText || response.statusText}`);
+    throw new Error(`OpenAI API request failed (${response.status}): ${errorText || response.statusText}`);
   }
 
   const data = (await response.json()) as any;
@@ -46,13 +39,14 @@ async function callOpenAiCompatible(apiKey: string, body: Record<string, any>) {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const apiKey =
-    env.GEMINI_API_KEY ||
     env.OPENAI_API_KEY ||
+    env.GEMINI_API_KEY ||
     env.OPENROUTER_API_KEY ||
+    env.VITE_OPENAI_API_KEY ||
     env.VITE_GEMINI_API_KEY ||
     env.VITE_OPENROUTER_API_KEY ||
-    process.env.GEMINI_API_KEY ||
     process.env.OPENAI_API_KEY ||
+    process.env.GEMINI_API_KEY ||
     process.env.OPENROUTER_API_KEY ||
     '';
 
@@ -74,7 +68,7 @@ export default defineConfig(({ mode }) => {
               res.setHeader('Content-Type', 'application/json');
               res.end(
                 JSON.stringify({
-                  error: 'API klíč není nastaven. Přidej GEMINI_API_KEY nebo OPENROUTER_API_KEY do svého souboru prostředí.',
+                  error: 'API klíč není nastaven. Přidej OPENAI_API_KEY nebo GEMINI_API_KEY do svého souboru prostředí.',
                 })
               );
               return;
@@ -111,11 +105,8 @@ VÝSTUP MUSÍ BÝT VÝHRADNĚ VALIDNÍ JSON BEZ TEXTU OKOLO:
   "markdown": "Kompletní strukturovaný zápisek v Markdownu s KaTeX vzorci"
 }`;
 
-                  const isOpenRouter = apiKey.startsWith('sk-or-');
-                  const model = isOpenRouter ? 'openai/gpt-5-mini' : 'gpt-5-mini';
-
-                  const result = await callOpenAiCompatible(apiKey, {
-                    model,
+                  const result = await callOpenAi(apiKey, {
+                    model: 'gpt-5-mini',
                     messages: [
                       { role: 'system', content: systemInstruction },
                       {
@@ -135,9 +126,7 @@ VÝSTUP MUSÍ BÝT VÝHRADNĚ VALIDNÍ JSON BEZ TEXTU OKOLO:
                       },
                     ],
                     reasoning_effort: 'low',
-                    reasoning: { effort: 'low' },
-                    temperature: 0.2,
-                    max_tokens: 3000,
+                    max_completion_tokens: 3500,
                   });
 
                   res.statusCode = 200;
@@ -164,11 +153,8 @@ VÝSTUP MUSÍ BÝT VÝHRADNĚ VALIDNÍ JSON POLE:
   }
 ]`;
 
-                  const isOpenRouter = apiKey.startsWith('sk-or-');
-                  const model = isOpenRouter ? 'openai/gpt-5.6-luna' : 'gpt-5.6-luna';
-
-                  const result = await callOpenAiCompatible(apiKey, {
-                    model,
+                  const result = await callOpenAi(apiKey, {
+                    model: 'gpt-5.6-luna',
                     messages: [
                       { role: 'system', content: systemInstruction },
                       {
@@ -177,7 +163,7 @@ VÝSTUP MUSÍ BÝT VÝHRADNĚ VALIDNÍ JSON POLE:
                       },
                     ],
                     temperature: 0.3,
-                    max_tokens: 2500,
+                    max_completion_tokens: 2500,
                   });
 
                   res.statusCode = 200;
@@ -200,11 +186,8 @@ DŮLEŽITÉ:
 - Bezchybná spisovná čeština.
 - Vrať VÝHRADNĚ validní JSON pole.`;
 
-                  const isOpenRouter = apiKey.startsWith('sk-or-');
-                  const model = isOpenRouter ? 'openai/gpt-5.6-luna' : 'gpt-5.6-luna';
-
-                  const result = await callOpenAiCompatible(apiKey, {
-                    model,
+                  const result = await callOpenAi(apiKey, {
+                    model: 'gpt-5.6-luna',
                     messages: [
                       { role: 'system', content: systemInstruction },
                       {
@@ -213,7 +196,7 @@ DŮLEŽITÉ:
                       },
                     ],
                     temperature: 0.3,
-                    max_tokens: 2500,
+                    max_completion_tokens: 2500,
                   });
 
                   res.statusCode = 200;

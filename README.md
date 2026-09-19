@@ -68,8 +68,8 @@ npm install
 Vytvoř v kořeni projektu soubor `.env.local` a vyplň potřebné klíče (šablonu najdeš v `.env.example`):
 
 ```env
-# AI API klíč (OpenRouter nebo OpenAI - např. sk-or-v1-... nebo sk-proj-...)
-GEMINI_API_KEY=sk-or-v1-tvujKlic...
+# OpenAI API klíč (sk-proj-... nebo zadaný v GEMINI_API_KEY)
+OPENAI_API_KEY=sk-proj-tvujKlic...
 
 # Supabase konfigurace projektu
 VITE_SUPABASE_URL=https://twoj-projekt.supabase.co
@@ -92,7 +92,7 @@ npm run preview
 
 ### 🔐 Bezpečnost a Vercel Deployment
 
-- **Žádné úniky API klíče:** Proměnná pro AI API je bezpečně uložena na Vercelu (jako `GEMINI_API_KEY` nebo `OPENROUTER_API_KEY`) bez prefixu `VITE_`. Na Vercelu je uložena jako chráněný **Secret** v Environment Variables a nikdy se nedostane do klientského bundle v prohlížeči.
+- **Žádné úniky API klíče:** Proměnná pro AI API je bezpečně uložena na Vercelu (jako `OPENAI_API_KEY` nebo `GEMINI_API_KEY`) bez prefixu `VITE_`. Na Vercelu je uložena jako chráněný **Secret** v Environment Variables a nikdy se nedostane do klientského bundle v prohlížeči.
 - **Serverless Endpoint:** Klientská aplikace komunikuje výhradně přes relativní URL `/api/gemini`, kde běží node runtime s `maxDuration: 60s`.
 - **CORS & Omezení:** V produkci doporučujeme omezit API klíč pouze na povolené referrery nebo doménu `flexnote.oliverseidl.dev`.
 

@@ -17,21 +17,13 @@ export class GeminiServiceError extends Error {
   }
 }
 
-async function callClientOpenAiCompatible(apiKey: string, body: Record<string, any>) {
-  const isOpenRouter = apiKey.startsWith('sk-or-');
-  const endpoint = isOpenRouter
-    ? 'https://openrouter.ai/api/v1/chat/completions'
-    : 'https://api.openai.com/v1/chat/completions';
+async function callClientOpenAi(apiKey: string, body: Record<string, any>) {
+  const endpoint = 'https://api.openai.com/v1/chat/completions';
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${apiKey.trim()}`,
   };
-
-  if (isOpenRouter) {
-    headers['HTTP-Referer'] = 'https://flexnote.oliverseidl.dev';
-    headers['X-Title'] = 'Flexnote';
-  }
 
   const response = await fetch(endpoint, {
     method: 'POST',
@@ -41,7 +33,7 @@ async function callClientOpenAiCompatible(apiKey: string, body: Record<string, a
 
   if (!response.ok) {
     const errorText = await response.text().catch(() => '');
-    throw new Error(`AI request failed (${response.status}): ${errorText || response.statusText}`);
+    throw new Error(`OpenAI request failed (${response.status}): ${errorText || response.statusText}`);
   }
 
   const data = (await response.json()) as any;
@@ -81,9 +73,9 @@ export async function callGeminiApi(action: 'ocr' | 'flashcards' | 'quiz', paylo
   } catch (err: any) {
     // If client has a local VITE API key, fallback to client-side call
     const clientKey =
+      import.meta.env.VITE_OPENAI_API_KEY ||
       import.meta.env.VITE_GEMINI_API_KEY ||
       import.meta.env.VITE_OPENROUTER_API_KEY ||
-      import.meta.env.VITE_OPENAI_API_KEY ||
       import.meta.env.VITE_GOOGLE_API_KEY;
     if (clientKey && !clientKey.includes('your_gemini_api_key_here') && !clientKey.includes('your_openrouter_api_key_here')) {
       console.warn('Backend /api/gemini failed, using direct client-side fallback:', err.message);
@@ -101,8 +93,6 @@ async function callGeminiClientDirect(
   payload: Record<string, any>,
   apiKey: string
 ): Promise<any> {
-  const isOpenRouter = apiKey.startsWith('sk-or-');
-
   if (action === 'ocr') {
     const { imageBase64 } = payload;
     const systemInstruction = `Jsi Flexnote AI OCR engine specializovaný na převod fotografií školních sešitů do přehledného studijního Markdownu.
@@ -120,9 +110,8 @@ VÝSTUP MUSÍ BÝT VÝHRADNĚ VALIDNÍ JSON:
   "markdown": "Kompletní strukturovaný zápisek v Markdownu s KaTeX vzorci"
 }`;
 
-    const model = isOpenRouter ? 'openai/gpt-5-mini' : 'gpt-5-mini';
-    return callClientOpenAiCompatible(apiKey, {
-      model,
+    return callClientOpenAi(apiKey, {
+      model: 'gpt-5-mini',
       messages: [
         { role: 'system', content: systemInstruction },
         {
@@ -134,41 +123,37 @@ VÝSTUP MUSÍ BÝT VÝHRADNĚ VALIDNÍ JSON:
         },
       ],
       reasoning_effort: 'low',
-      reasoning: { effort: 'low' },
-      temperature: 0.2,
-      max_tokens: 3000,
+      max_completion_tokens: 3500,
     });
   }
 
   if (action === 'flashcards') {
     const { text, promptTitle, subject } = payload;
     const systemInstruction = `Jsi výukový asistent aplikace Flexnote pro kartičky (Flashcards). Vytvoř 4 až 8 kartiček. Vzorce v KaTeXu ($...$, $$...$$). Validní JSON pole: [{ "front": "...", "back": "...", "category": "formula"|"concept"|"fact"|"general", "hint": "..." }]`;
-    const model = isOpenRouter ? 'openai/gpt-5.6-luna' : 'gpt-5.6-luna';
 
-    return callClientOpenAiCompatible(apiKey, {
-      model,
+    return callClientOpenAi(apiKey, {
+      model: 'gpt-5.6-luna',
       messages: [
         { role: 'system', content: systemInstruction },
         { role: 'user', content: `Vytvoř výukové flashcards ze zápisků:\nTéma: ${promptTitle}\nPředmět: ${subject}\n\n${text}` },
       ],
       temperature: 0.3,
-      max_tokens: 2500,
+      max_completion_tokens: 2500,
     });
   }
 
   if (action === 'quiz') {
     const { text, promptTitle, subject, isTopic } = payload;
     const systemInstruction = `Jsi pedagogický asistent Flexnote. Vytvoř ${isTopic ? '6 až 8' : '4 až 6'} otázek pokrývajících látku. Typy: multiple-choice, fill-in, matching. Vzorce v KaTeXu. Validní JSON pole.`;
-    const model = isOpenRouter ? 'openai/gpt-5.6-luna' : 'gpt-5.6-luna';
 
-    return callClientOpenAiCompatible(apiKey, {
-      model,
+    return callClientOpenAi(apiKey, {
+      model: 'gpt-5.6-luna',
       messages: [
         { role: 'system', content: systemInstruction },
         { role: 'user', content: `Vytvoř cvičný test:\nTitul: ${promptTitle}\nPředmět: ${subject}\n\n${text}` },
       ],
       temperature: 0.3,
-      max_tokens: 2500,
+      max_completion_tokens: 2500,
     });
   }
 
